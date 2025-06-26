@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f77277ae-7145-4a46-8ada-ecec86b96798" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/app.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/app.js" afterDir="false" />
+    <list default="true" id="f77277ae-7145-4a46-8ada-ecec86b96798" name="Changes" comment="fix for render">
       <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -90,11 +88,25 @@
       <workItem from="1750959205604" duration="3152000" />
       <workItem from="1750962631034" duration="3184000" />
       <workItem from="1750969314783" duration="1199000" />
-      <workItem from="1750972088197" duration="671000" />
+      <workItem from="1750972088197" duration="980000" />
     </task>
+    <task id="LOCAL-00001" summary="fix for vercel">
+      <option name="closed" value="true" />
+      <created>1750972849608</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1750972849608</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="fix for vercel" />
+    <MESSAGE value="fix for render" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix for render" />
   </component>
 </project>
