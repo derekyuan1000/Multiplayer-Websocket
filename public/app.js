@@ -57,7 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastMoveTime = null;
 
   // Connect to Socket.IO server
-  const socket = io();
+  const socket = io({
+    transports: ['websocket', 'polling'],
+    path: '/socket.io/'
+  });
 
   // Socket.IO event handlers
   socket.on('connect', () => {
