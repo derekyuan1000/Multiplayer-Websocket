@@ -635,8 +635,18 @@ class ChessGame {
         to,
         capturedPiece: capturedPiece ? { type: capturedPiece.type, color: capturedPiece.color } : null,
         inCheck: this.inCheck[opponentColor],
-        isCheckmate: isCheckmateResult
+        isCheckmate: isCheckmateResult,
+        // Add castling information if it occurred
+        castlingType: null
       };
+
+      if (piece.type === 'king') {
+        if (to.col - from.col === 2) {
+          moveData.castlingType = 'kingside';
+        } else if (to.col - from.col === -2) {
+          moveData.castlingType = 'queenside';
+        }
+      }
       this.onMove(moveData);
     }
   }
@@ -705,11 +715,44 @@ class ChessGame {
   }
 
   applyRemoteMove(move) {
-    const { from, to, inCheck, isCheckmate } = move;
+    // The 'move' object here is the 'moveData' sent from the other client,
+    // which is wrapped inside game.moves[...].move by the server.
+    const { from, to, inCheck, isCheckmate, castlingType } = move;
+    const pieceToMove = this.board[from.row][from.col]; // Get the piece before nullifying its original square
 
-    // Apply the remote move
-    this.board[to.row][to.col] = this.board[from.row][from.col];
+    // Standard piece move
+    this.board[to.row][to.col] = pieceToMove;
     this.board[from.row][from.col] = null;
+
+    // Handle castling: move the rook as well for the remote player
+    if (castlingType && pieceToMove && pieceToMove.type === 'king') {
+      const kingRow = to.row; // King's row is the same as 'to.row'
+      if (castlingType === 'kingside') {
+        const rook = this.board[kingRow][7]; // Rook on h-file
+        this.board[kingRow][5] = rook;      // Move rook to f-file
+        this.board[kingRow][7] = null;      // Empty h-file
+      } else if (castlingType === 'queenside') {
+        const rook = this.board[kingRow][0]; // Rook on a-file
+        this.board[kingRow][3] = rook;      // Move rook to d-file
+        this.board[kingRow][0] = null;      // Empty a-file
+      }
+    }
+
+    // Update hasMoved flags based on the moved piece (king or rook)
+    // This is important for the remote client to maintain correct castling rights state
+    if (pieceToMove) {
+        const pieceColor = pieceToMove.color;
+        if (pieceToMove.type === 'king') {
+            this.hasMoved[pieceColor].king = true;
+        } else if (pieceToMove.type === 'rook') {
+            if (from.col === 0 && from.row === (pieceColor === 'white' ? 7 : 0)) { // a-file rook original position
+                this.hasMoved[pieceColor].rookA = true;
+            } else if (from.col === 7 && from.row === (pieceColor === 'white' ? 7 : 0)) { // h-file rook original position
+                this.hasMoved[pieceColor].rookH = true;
+            }
+        }
+    }
+
 
     // Switch turns
     this.currentTurn = this.currentTurn === 'white' ? 'black' : 'white';
