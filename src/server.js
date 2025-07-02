@@ -27,8 +27,7 @@ for (let i = 1; i <= 5; i++) {
     whitePlayer: null,
     blackPlayer: null,
     maxPlayers: 2,
-    games: {},
-    gameStarted: false
+    games: {}
   };
 }
 
@@ -64,10 +63,6 @@ io.on('connection', (socket) => {
 
     if (!server) {
       return socket.emit('serverError', 'Server not found');
-    }
-
-    if (server.gameStarted) {
-      return socket.emit('serverError', 'Game already in progress');
     }
 
     // Update user status to in-game
@@ -108,10 +103,6 @@ io.on('connection', (socket) => {
 
     if (!server) {
       return socket.emit('serverError', 'Server not found');
-    }
-
-    if (server.gameStarted) {
-      return socket.emit('serverError', 'Game already in progress');
     }
 
     // Update user status to in-game
@@ -233,7 +224,6 @@ io.on('connection', (socket) => {
     if (move.isCheckmate) {
       io.to(serverId).emit('gameEnded', game);
       // Reset server state for a new game
-      server.gameStarted = false;
       server.games = {}; // Clear the games log for this server
       io.emit('serverUpdated', server); // Notify clients the server is ready for a new game
     }
@@ -247,9 +237,25 @@ io.on('connection', (socket) => {
       return socket.emit('serverError', 'Server not found');
     }
 
-    if (server.gameStarted) {
-      return socket.emit('serverError', 'Game already started');
+    // Check if either player is already in an active game on this server
+    const whitePlayerId = server.whitePlayer ? server.whitePlayer.id : null;
+    const blackPlayerId = server.blackPlayer ? server.blackPlayer.id : null;
+
+    if (whitePlayerId === socket.id) { // The requester is white
+      if (blackPlayerId) {
+        for (const gameId in server.games) {
+          const game = server.games[gameId];
+          if (game.status === 'active' &&
+              ((game.whitePlayer.id === whitePlayerId && game.blackPlayer.id === blackPlayerId) ||
+               (game.whitePlayer.id === blackPlayerId && game.blackPlayer.id === whitePlayerId))) {
+            return socket.emit('serverError', 'A game between these players is already in progress.');
+          }
+        }
+      }
+    } else { // The requester is not white, which shouldn't happen based on current logic, but good to check
+      return socket.emit('serverError', 'Only the white player can start the game.');
     }
+
 
     if (!server.whitePlayer || server.whitePlayer.id !== socket.id) {
       return socket.emit('serverError', 'Only the white player can start the game');
@@ -291,7 +297,6 @@ io.on('connection', (socket) => {
     };
 
     server.games[gameId] = game;
-    server.gameStarted = true;
 
     // Update both players' status to in-game
     [whitePlayer.id, blackPlayer.id].forEach(playerId => {
@@ -331,7 +336,6 @@ io.on('connection', (socket) => {
     io.to(serverId).emit('gameEnded', game);
 
     // Reset server state for a new game
-    server.gameStarted = false;
     server.games = {}; // Clear the games log for this server
     io.emit('serverUpdated', server); // Notify clients the server is ready for a new game
   });
@@ -356,7 +360,6 @@ io.on('connection', (socket) => {
     io.to(serverId).emit('gameEnded', game);
 
     // Reset server state for a new game
-    server.gameStarted = false;
     server.games = {}; // Clear the games log for this server
     io.emit('serverUpdated', server); // Notify clients the server is ready for a new game
   });
@@ -375,7 +378,6 @@ io.on('connection', (socket) => {
       // Check if player was white or black
       if (server.whitePlayer && server.whitePlayer.id === socket.id) {
         server.whitePlayer = null;
-        server.gameStarted = false;
 
         // End any active games
         for (const gameId in server.games) {
@@ -396,7 +398,6 @@ io.on('connection', (socket) => {
         break;
       } else if (server.blackPlayer && server.blackPlayer.id === socket.id) {
         server.blackPlayer = null;
-        server.gameStarted = false;
 
         // End any active games
         for (const gameId in server.games) {
