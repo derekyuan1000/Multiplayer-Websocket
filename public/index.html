@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess Servers</title>
+    <title>Teams</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -24,6 +24,36 @@
                 <h3>Online Users</h3>
                 <div id="online-users-list" class="online-users-list">
                     <p class="no-users">No other users online</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-selection-section" class="section hidden">
+            <h2>Select a Game</h2>
+            <div class="games-grid">
+                <div class="game-card" data-game="chess">
+                    <img src="assets/chess-icon.png" alt="Chess" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><path d=%22M12,4c2.21,0,4,1.79,4,4s-1.79,4-4,4s-4-1.79-4-4S9.79,4,12,4M9,18c0,0.55,0.45,1,1,1h4c0.55,0,1-0.45,1-1v-5h-6V18z%22 fill=%22%233498db%22/></svg>'">
+                    <h3>Chess</h3>
+                    <p>Play the classic game of strategy with friends or opponents online</p>
+                    <button class="select-game-btn">Select</button>
+                </div>
+                <div class="game-card" data-game="checkers">
+                    <img src="assets/checkers-icon.png" alt="Checkers" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><path d=%22M4,4H8V8H4V4M10,4H14V8H10V4M16,4H20V8H16V4M4,10H8V14H4V10M10,10H14V14H10V10M16,10H20V14H16V10M4,16H8V20H4V16M10,16H14V20H10V16M16,16H20V20H16V16Z%22 fill=%22%23e74c3c%22/></svg>'">
+                    <h3>Checkers</h3>
+                    <p>Coming soon! Challenge friends to a game of checkers</p>
+                    <button class="select-game-btn" disabled>Coming Soon</button>
+                </div>
+                <div class="game-card" data-game="go">
+                    <img src="assets/go-icon.png" alt="Go" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%2210%22 fill=%22%23f1c40f%22 /><circle cx=%2212%22 cy=%2212%22 r=%228%22 fill=%22none%22 stroke=%22%23333%22 stroke-width=%220.5%22 /></svg>'">
+                    <h3>Go</h3>
+                    <p>Coming soon! Play the ancient board game of territory</p>
+                    <button class="select-game-btn" disabled>Coming Soon</button>
+                </div>
+                <div class="game-card" data-game="backgammon">
+                    <img src="assets/backgammon-icon.png" alt="Backgammon" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><path d=%22M4,4H20V20H4V4M6,6V18H18V6H6Z%22 fill=%22%2327ae60%22/></svg>'">
+                    <h3>Backgammon</h3>
+                    <p>Coming soon! Enjoy this classic dice and strategy game</p>
+                    <button class="select-game-btn" disabled>Coming Soon</button>
                 </div>
             </div>
         </div>

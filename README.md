@@ -1,16 +1,29 @@
-# Chess Game Platform
+# Multiplayer Websocket Game Platform
 
 ## Overview
-The Chess Game Platform is a web-based application that allows users to play chess online with other players or against the Stockfish chess engine. It features real-time gameplay, time controls, and game analysis.
+The Multiplayer Game Platform is a web-based application that allows users to play board games online with real-time multiplayer capabilities. Currently, it features a fully functional chess game, with plans to expand to other board games in the future.
 
 ## Features
-- **Play Online**: Join servers and play chess with other users.
-- **Play Against Stockfish**: Challenge the Stockfish chess engine.
-- **Game Analysis**: Analyze completed games with Stockfish.
-- **Time Controls**: Choose from preset or custom time controls.
-- **Responsive Design**: Optimized for desktop and mobile devices.
+- **Multiple Game Selection**: Choose from a variety of board games (with Chess currently available and more coming soon)
+- **Online Multiplayer**: Join servers and play chess with other users in real-time
+- **Player Roles**: Select whether to play as white or black pieces
+- **Time Controls**: Choose from various preset time controls (Blitz, Rapid) or create custom time settings
+- **Visual Board Notation**: Clear rank and file labels for easy move tracking
+- **Player Status**: See who's online and their current game status
+- **Real-time Chat**: Communicate with other players during games
+- **Game Analysis**: Analyze completed games with Stockfish
+- **Responsive Design**: Optimized for desktop and mobile devices
 
-## Installation
+# Chess Game Rules and Capabilities
+- **Complete Chess Rules**: Full implementation of chess rules including:
+  - Castling (kingside and queenside)
+  - En passant captures
+  - Pawn promotion
+  - Check and checkmate detection
+- **Time Management**: Clock with increment support and timeout detection
+- **Game Outcomes**: Win by checkmate, resignation, or timeout
+
+## Local Installation
 
 1. Clone the repository:
    ```bash
@@ -43,7 +56,6 @@ npm run dev
 - **Chess Engine**: Stockfish
 
 ## TODO
-- Add chat functionality.
 - Improve Stockfish integration.
 - Enhance lobby features.
 

@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   // DOM elements
   const loginSection = document.getElementById('login-section');
+  const gameSelectionSection = document.getElementById('game-selection-section');
   const serverSection = document.getElementById('server-section');
   const lobbySection = document.getElementById('lobby-section');
   const gameSection = document.getElementById('game-section');
@@ -48,6 +49,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const sendChatButton = document.getElementById('send-chat-button');
   const toggleChatButton = document.getElementById('toggle-chat-button');
 
+  // Game selection elements
+  const gameCards = document.querySelectorAll('.game-card');
+  const selectGameButtons = document.querySelectorAll('.select-game-btn');
+
   // Game state
   let playerName = '';
   let currentServerId = null;
@@ -55,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let playerColor = null;
   let chessGame = null;
   let isWhitePlayer = false;
+  let selectedGame = null;
 
   // Time control state
   let gameTimeControl = null;
@@ -225,10 +231,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Send the user's name to the server
     socket.emit('setUserName', playerName);
 
-    showSection(serverSection);
+    // Show game selection screen instead of directly going to server list
+    showSection(gameSelectionSection);
+  });
 
-    // Request server list
-    socket.emit('serverList');
+  // Game selection event handlers
+  gameCards.forEach(card => {
+    const gameType = card.getAttribute('data-game');
+    const selectButton = card.querySelector('.select-game-btn');
+
+    if (!selectButton.disabled) {
+      selectButton.addEventListener('click', () => {
+        selectedGame = gameType;
+
+        if (gameType === 'chess') {
+          // Request server list for chess
+          socket.emit('serverList');
+          showSection(serverSection);
+        } else {
+          // For other games that are coming soon
+          alert(`${gameType.charAt(0).toUpperCase() + gameType.slice(1)} is coming soon!`);
+        }
+      });
+    }
   });
 
   leaveGameButton.addEventListener('click', () => {
@@ -245,7 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
       playerColor = null;
       chessGame = null;
 
-      showSection(serverSection);
+      // Go back to game selection instead of server list
+      showSection(gameSelectionSection);
     }
   });
 
@@ -268,7 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
     currentServerId = null;
     playerColor = null;
     isWhitePlayer = false;
-    showSection(serverSection);
+    // Go back to game selection instead of server list
+    showSection(gameSelectionSection);
   });
 
   startGameButton.addEventListener('click', () => {
@@ -451,6 +478,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function showSection(section) {
     // Hide all sections
     loginSection.classList.add('hidden');
+    gameSelectionSection.classList.add('hidden');
     serverSection.classList.add('hidden');
     lobbySection.classList.add('hidden');
     gameSection.classList.add('hidden');
