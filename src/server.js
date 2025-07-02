@@ -232,6 +232,10 @@ io.on('connection', (socket) => {
     // If game ended, notify about the result
     if (move.isCheckmate) {
       io.to(serverId).emit('gameEnded', game);
+      // Reset server state for a new game
+      server.gameStarted = false;
+      server.games = {}; // Clear the games log for this server
+      io.emit('serverUpdated', server); // Notify clients the server is ready for a new game
     }
   });
 
@@ -325,6 +329,11 @@ io.on('connection', (socket) => {
 
     // Notify both players about the game end
     io.to(serverId).emit('gameEnded', game);
+
+    // Reset server state for a new game
+    server.gameStarted = false;
+    server.games = {}; // Clear the games log for this server
+    io.emit('serverUpdated', server); // Notify clients the server is ready for a new game
   });
 
   // Handle timeout
@@ -345,6 +354,11 @@ io.on('connection', (socket) => {
 
     // Notify both players about the timeout
     io.to(serverId).emit('gameEnded', game);
+
+    // Reset server state for a new game
+    server.gameStarted = false;
+    server.games = {}; // Clear the games log for this server
+    io.emit('serverUpdated', server); // Notify clients the server is ready for a new game
   });
 
   // Handle player leaving (disconnecting)
