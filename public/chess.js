@@ -210,14 +210,6 @@ class ChessGame {
         const piece = this.board[actualRow][actualCol];
         if (piece) {
           square.textContent = chessPieces[piece.color][piece.type];
-          // Make pieces draggable if it's the current player's turn and piece color matches
-          if (piece.color === this.currentTurn && piece.color === this.playerColor) {
-            square.setAttribute('draggable', true);
-          } else {
-            square.setAttribute('draggable', false);
-          }
-        } else {
-          square.setAttribute('draggable', false);
         }
 
         // Highlight selected piece and valid moves
@@ -230,87 +222,9 @@ class ChessGame {
         }
 
         square.addEventListener('click', () => this.handleSquareClick(actualRow, actualCol));
-
-        // Add drag and drop event listeners
-        square.addEventListener('dragstart', (event) => this.handleDragStart(event, actualRow, actualCol));
-        square.addEventListener('dragover', (event) => this.handleDragOver(event));
-        square.addEventListener('drop', (event) => this.handleDrop(event, actualRow, actualCol));
-        square.addEventListener('dragend', (event) => this.handleDragEnd(event));
-
         this.gameElement.appendChild(square);
       }
     }
-  }
-
-  handleDragStart(event, row, col) {
-    const piece = this.board[row][col];
-    if (piece && piece.color === this.currentTurn && this.currentTurn === this.playerColor) {
-      event.dataTransfer.setData('text/plain', JSON.stringify({ row, col, ...piece }));
-      this.selectedPiece = { row, col, ...piece }; // Also set selectedPiece for visual feedback if needed
-      this.validMoves = this.getValidMoves(row, col, piece); // Calculate valid moves for highlighting drop zones
-      // Add a class to the dragged piece for styling
-      event.target.classList.add('dragging');
-      this.renderBoard(); // Re-render to show valid moves
-    } else {
-      event.preventDefault(); // Prevent dragging if it's not the player's piece or turn
-    }
-    // Clear any previous drag-over-target highlights
-    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target'));
-  }
-
-  handleDragOver(event) {
-    }
-  }
-
-  handleDragOver(event) {
-    event.preventDefault(); // Necessary to allow dropping
-    // Highlight the square if it's a valid drop target
-    const targetSquare = event.target.closest('.square');
-    if (targetSquare) {
-        const dropRow = parseInt(targetSquare.dataset.row);
-        const dropCol = parseInt(targetSquare.dataset.col);
-        if (this.validMoves.some(move => move.row === dropRow && move.col === dropCol)) {
-            targetSquare.classList.add('drag-over-target');
-        }
-    }
-  }
-
-  handleDrop(event, row, col) {
-    event.preventDefault();
-    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target')); // Clean up hover highlight
-    const draggedPieceData = JSON.parse(event.dataTransfer.getData('text/plain'));
-    const fromRow = draggedPieceData.row;
-    const fromCol = draggedPieceData.col;
-
-    // Check if the drop target is a valid move
-    const isValidDropTarget = this.validMoves.some(move => move.row === row && move.col === col);
-
-    if (this.selectedPiece && this.selectedPiece.row === fromRow && this.selectedPiece.col === fromCol && isValidDropTarget) {
-      this.makeMove({
-        from: { row: fromRow, col: fromCol },
-        to: { row, col }
-      });
-    }
-
-    this.selectedPiece = null;
-    this.validMoves = [];
-    // Remove dragging class from all elements in case it wasn't removed in dragend
-    document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
-    this.renderBoard();
-  }
-
-  handleDragEnd(event) {
-    // Remove dragging class from the piece
-    event.target.classList.remove('dragging');
-    // It's good practice to clear the selection and valid moves here too,
-    // especially if a drop didn't occur on a valid target.
-    if (this.selectedPiece) { // Only reset if a piece was actually being dragged
-        this.selectedPiece = null;
-        this.validMoves = [];
-        this.renderBoard(); // Re-render to clear highlights if the drop was not successful or outside the board
-    }
-    // Ensure drag-over-target highlights are cleared
-    document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target'));
   }
 
   handleSquareClick(row, col) {
