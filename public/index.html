@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Servers</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chess Game Platform</h1>
+        </header>
+
+        <div id="login-section" class="section">
+            <h2>Enter Your Name</h2>
+            <div class="form-group">
+                <input type="text" id="player-name" placeholder="Your name">
+                <button id="login-button">Continue</button>
+            </div>
+
+            <!-- Online Users Section -->
+            <div id="online-users-section">
+                <h3>Online Users</h3>
+                <div id="online-users-list" class="online-users-list">
+                    <p class="no-users">No other users online</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="server-section" class="section hidden">
+            <h2>Available Servers</h2>
+            <div id="server-list" class="server-list">
+                <!-- Server list will be populated here -->
+            </div>
+
+            <!-- Online Users Section for Server Selection -->
+            <div id="online-users-section">
+                <h3>Online Users</h3>
+                <div id="server-online-users-list" class="online-users-list">
+                    <p class="no-users">No other users online</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="lobby-section" class="section hidden">
+            <div class="lobby-header">
+                <h2 id="lobby-server-name">Chess Server</h2>
+                <button id="leave-lobby">Leave Server</button>
+            </div>
+
+            <div class="player-slots">
+                <div class="slot white-slot">
+                    <div class="slot-header">
+                        <span class="slot-icon">♔</span>
+                        <span class="slot-title">White Player</span>
+                    </div>
+                    <div class="slot-content" id="white-slot">
+                        <button class="join-slot-btn" id="join-white">Join as White</button>
+                        <div class="player-info hidden" id="white-player-info">
+                            <span class="player-name"></span>
+                            <span class="player-status">(You)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="slot black-slot">
+                    <div class="slot-header">
+                        <span class="slot-icon">♚</span>
+                        <span class="slot-title">Black Player</span>
+                    </div>
+                    <div class="slot-content" id="black-slot">
+                        <button class="join-slot-btn" id="join-black">Join as Black</button>
+                        <div class="player-info hidden" id="black-player-info">
+                            <span class="player-name"></span>
+                            <span class="player-status">(You)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lobby-controls">
+                <div id="time-control-section" class="time-control-section hidden">
+                    <h3>Select Time Control</h3>
+                    <div class="time-control-options">
+                        <div class="time-control-option">
+                            <input type="radio" id="blitz-3-2" name="timeControl" value="3+2" checked>
+                            <label for="blitz-3-2">3+2 (Blitz)</label>
+                            <span class="time-description">3 minutes + 2 second increment</span>
+                        </div>
+                        <div class="time-control-option">
+                            <input type="radio" id="blitz-5-3" name="timeControl" value="5+3">
+                            <label for="blitz-5-3">5+3 (Blitz)</label>
+                            <span class="time-description">5 minutes + 3 second increment</span>
+                        </div>
+                        <div class="time-control-option">
+                            <input type="radio" id="rapid-10-5" name="timeControl" value="10+5">
+                            <label for="rapid-10-5">10+5 (Rapid)</label>
+                            <span class="time-description">10 minutes + 5 second increment</span>
+                        </div>
+                        <div class="time-control-option">
+                            <input type="radio" id="rapid-15-10" name="timeControl" value="15+10">
+                            <label for="rapid-15-10">15+10 (Rapid)</label>
+                            <span class="time-description">15 minutes + 10 second increment</span>
+                        </div>
+                        <div class="time-control-option">
+                            <input type="radio" id="custom" name="timeControl" value="custom">
+                            <label for="custom">Custom</label>
+                            <div class="custom-time-inputs hidden" id="custom-time-inputs">
+                                <div class="input-group">
+                                    <label for="custom-minutes">Initial Minutes:</label>
+                                    <input type="number" id="custom-minutes" min="1" max="180" value="10">
+                                </div>
+                                <div class="input-group">
+                                    <label for="custom-increment">Increment (seconds):</label>
+                                    <input type="number" id="custom-increment" min="0" max="60" value="5">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button id="start-game-btn" class="start-game-btn hidden" disabled>Start Game</button>
+                <div id="lobby-status" class="lobby-status">Waiting for players to join...</div>
+            </div>
+
+            <!-- Online Users Section for Lobby -->
+            <div id="online-users-section">
+                <h3>Online Users</h3>
+                <div id="lobby-online-users-list" class="online-users-list">
+                    <p class="no-users">No other users online</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="game-section" class="section hidden">
+            <div class="game-info">
+                <h2>Chess Game</h2>
+                <div id="game-status">Waiting for opponent...</div>
+                <div id="player-info">
+                    <div id="white-player">White: <span></span></div>
+                    <div id="black-player">Black: <span></span></div>
+                </div>
+                <div id="current-turn">Current turn: <span>White</span></div>
+            </div>
+            <div class="game-board-container">
+                <div class="time-controls" id="time-controls-container">
+                    <div class="time-control black-time">
+                        <div class="player-label">Black</div>
+                        <div class="time-display" id="black-time">10:00</div>
+                    </div>
+                    <div class="time-control white-time">
+                        <div class="player-label">White</div>
+                        <div class="time-display" id="white-time">10:00</div>
+                    </div>
+                </div>
+                <div class="chess-board-wrapper">
+                    <div class="board-notation">
+                        <div class="ranks-notation">
+                            <div class="rank-label">8</div>
+                            <div class="rank-label">7</div>
+                            <div class="rank-label">6</div>
+                            <div class="rank-label">5</div>
+                            <div class="rank-label">4</div>
+                            <div class="rank-label">3</div>
+                            <div class="rank-label">2</div>
+                            <div class="rank-label">1</div>
+                        </div>
+                        <div class="board-container">
+                            <div id="chessboard" class="chessboard"></div>
+                            <div class="files-notation">
+                                <div class="file-label">a</div>
+                                <div class="file-label">b</div>
+                                <div class="file-label">c</div>
+                                <div class="file-label">d</div>
+                                <div class="file-label">e</div>
+                                <div class="file-label">f</div>
+                                <div class="file-label">g</div>
+                                <div class="file-label">h</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button id="leave-game">Leave Game</button>
+            <button id="resign-game" class="resign-game-btn hidden">Resign</button>
+            <button id="analyze-game" class="analyze-game-btn hidden">Analyze Game</button>
+            <div id="analysis-section" class="analysis-section hidden">
+                <div class="analysis-header">
+                    <h3>Game Analysis</h3>
+                    <div class="analysis-controls">
+                        <button id="prev-move">◀</button>
+                        <span id="move-number">Move 1</span>
+                        <button id="next-move">▶</button>
+                    </div>
+                </div>
+                <div class="analysis-content">
+                    <div class="best-move-container">
+                        <span>Best move:</span>
+                        <button id="best-move" class="best-move-button" disabled>...</button>
+                        <span id="evaluation-score">0.0</span>
+                    </div>
+                    <canvas id="eval-graph" width="600" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/lib/stockfish.js"></script>
+    <script src="chess.js"></script>
+    <script src="app.js"></script>
+
+    <div id="chat-container" class="chat-container">
+        <div class="chat-header">
+            <div class="chat-title">Chat</div>
+            <button id="toggle-chat-button" class="toggle-chat-button">−</button>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Type a message...">
+            <button id="send-chat-button">Send</button>
+        </div>
+    </div>
+</body>
+</html>
