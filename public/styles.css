@@ -118,6 +118,14 @@ button:hover {
     aspect-ratio: 1 / 1; /* Force squares to maintain their aspect ratio */
     position: relative; /* Ensure all child elements are positioned relative to the square */
     overflow: hidden; /* Prevent content from overflowing */
+}
+
+.square[draggable="true"] {
+    cursor: grab;
+}
+
+.square[draggable="true"]:active {
+    cursor: grabbing;
     min-height: 0; /* Fix for Firefox grid item height */
     min-width: 0; /* Fix for Firefox grid item width */
 }
@@ -979,4 +987,19 @@ button:hover {
 
 .resign-game-btn.hidden {
     display: none;
+}
+
+/* Styles for dragging pieces */
+.square.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+/* Highlight for valid drop targets during drag */
+.square.valid-move.drag-over-target {
+    background-color: #77dd77 !important; /* Light green, !important to override other highlights */
+}
+
+.square.valid-move.drag-over-target::before {
+    background-color: rgba(0, 0, 0, 0.3); /* Darker dot for contrast */
 }
