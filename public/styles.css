@@ -923,6 +923,74 @@ button:hover {
     margin-bottom: 20px;
 }
 
+/* Chat Styles */
+.chat-container {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: 300px;
+    height: 400px;
+    background-color: #fff;
+    border-top: 1px solid #ccc;
+    border-left: 1px solid #ccc;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, sans-serif;
+    z-index: 1000; /* Ensure chat is on top of other elements */
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    background-color: #f9f9f9;
+}
+
+.chat-message {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.chat-sender {
+    font-weight: bold;
+    color: #333;
+}
+
+.chat-text {
+    color: #555;
+}
+
+.chat-input-container {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #eee;
+    background-color: #fff;
+}
+
+#chat-input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 8px;
+}
+
+#send-chat-button {
+    padding: 8px 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#send-chat-button:hover {
+    background-color: #0056b3;
+}
+
 .best-move-button {
     padding: 8px 15px;
     font-size: 16px;

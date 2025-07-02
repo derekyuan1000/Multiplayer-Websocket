@@ -407,6 +407,12 @@ io.on('connection', (socket) => {
     // Broadcast updated user list to all remaining clients
     io.emit('onlineUsers', Array.from(connectedUsers.values()));
   });
+
+  // Handle chat messages
+  socket.on('chatMessage', (message) => {
+    // Broadcast the message to all connected clients
+    io.emit('chatMessage', message);
+  });
 });
 
 // Function to check if a port is in use

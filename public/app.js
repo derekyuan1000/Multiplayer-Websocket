@@ -41,6 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const whiteTimeControl = document.querySelector('.white-time');
   const blackTimeControl = document.querySelector('.black-time');
 
+  // Chat elements
+  const chatContainer = document.getElementById('chat-container');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  const sendChatButton = document.getElementById('send-chat-button');
+
   // Game state
   let playerName = '';
   let currentServerId = null;
@@ -558,4 +564,32 @@ document.addEventListener('DOMContentLoaded', () => {
     blackTimeRemaining = 0;
     lastMoveTime = null;
   });
+
+  // Chat event handlers
+  sendChatButton.addEventListener('click', sendChatMessage);
+  chatInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+      sendChatMessage();
+    }
+  });
+
+  function sendChatMessage() {
+    const message = chatInput.value.trim();
+    if (message && playerName) {
+      socket.emit('chatMessage', { sender: playerName, text: message });
+      chatInput.value = '';
+    }
+  }
+
+  socket.on('chatMessage', (message) => {
+    displayChatMessage(message);
+  });
+
+  function displayChatMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('chat-message');
+    messageElement.innerHTML = `<span class="chat-sender">${message.sender}:</span> <span class="chat-text">${message.text}</span>`;
+    chatMessages.appendChild(messageElement);
+    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to the bottom
+  }
 });
