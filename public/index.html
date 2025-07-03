@@ -336,8 +336,34 @@
                 </div>
             </div>
         </div>
+
+        <!-- Promotion Modal -->
+        <div id="promotion-modal" class="promotion-modal hidden">
+            <div class="promotion-modal-content">
+                <h3>Choose Promotion Piece</h3>
+                <div class="promotion-options">
+                    <div class="promotion-option" data-piece="queen">
+                        <img src="" alt="Queen" class="promotion-piece-image">
+                        <span>Queen</span>
+                    </div>
+                    <div class="promotion-option" data-piece="rook">
+                        <img src="" alt="Rook" class="promotion-piece-image">
+                        <span>Rook</span>
+                    </div>
+                    <div class="promotion-option" data-piece="bishop">
+                        <img src="" alt="Bishop" class="promotion-piece-image">
+                        <span>Bishop</span>
+                    </div>
+                    <div class="promotion-option" data-piece="knight">
+                        <img src="" alt="Knight" class="promotion-piece-image">
+                        <span>Knight</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <script src="https://unpkg.com/stockfish.js@10.0.2/stockfish.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/lib/stockfish.js"></script>
     <script src="chess.js"></script>

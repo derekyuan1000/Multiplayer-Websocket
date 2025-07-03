@@ -36,6 +36,11 @@ class ChessGame {
       black: { king: false, rookA: false, rookH: false }  // Corresponds to a8, h8
     };
 
+    // Promotion state
+    this.pendingPromotion = null; // Will store { from, to, color } when promotion is needed
+    this.promotionModal = document.getElementById('promotion-modal');
+    this.setupPromotionModal();
+
     // Initialize Stockfish
     this.stockfish = new StockfishWrapper();
     this.stockfish.onMessage = (message) => this.handleStockfishMessage(message);
@@ -658,10 +663,6 @@ class ChessGame {
       }
     }
 
-    // Move the piece
-    this.board[to.row][to.col] = piece;
-    this.board[from.row][from.col] = null;
-
     // Update hasMoved flags
     const pieceColor = piece.color;
     if (piece.type === 'king') {
@@ -674,6 +675,29 @@ class ChessGame {
       }
     }
 
+    // Check for promotion BEFORE moving the piece
+    if (piece.type === 'pawn' && (to.row === 0 || to.row === 7)) {
+      // Store the promotion info and show modal
+      this.pendingPromotion = { from, to, color: piece.color };
+      this.showPromotionModal(piece.color);
+      // Don't complete the move yet - wait for promotion choice
+      return;
+    }
+
+    // Move the piece (for non-promotion moves)
+    this.board[to.row][to.col] = piece;
+    this.board[from.row][from.col] = null;
+
+    // Complete the move
+    this.completeMove(from, to, {
+      capturedPiece: capturedPiece ? { type: capturedPiece.type, color: capturedPiece.color } : null,
+      castlingType: piece.type === 'king' && Math.abs(to.col - from.col) === 2 ?
+        (to.col > from.col ? 'kingside' : 'queenside') : null
+    });
+  }
+
+  // Add method to complete the move after promotion choice
+  completeMove(from, to, additionalData = {}) {
     // Switch turns
     this.currentTurn = this.currentTurn === 'white' ? 'black' : 'white';
 
@@ -682,7 +706,7 @@ class ChessGame {
     const inCheck = this.isKingInCheck(opponentColor);
     this.inCheck[opponentColor] = inCheck;
 
-    // Check for checkmate - fix the naming conflict
+    // Check for checkmate
     let isCheckmateResult = false;
     if (inCheck) {
       isCheckmateResult = this.isCheckmateDetected(opponentColor);
@@ -708,7 +732,7 @@ class ChessGame {
       this.showAnalyzeButton();
     }
 
-    // IMPORTANT: Re-render the board to show the move
+    // Re-render the board to show the move
     this.renderBoard();
 
     // Emit the move event if a callback is provided
@@ -716,23 +740,65 @@ class ChessGame {
       const moveData = {
         from,
         to,
-        capturedPiece: capturedPiece ? { type: capturedPiece.type, color: capturedPiece.color } : null,
         inCheck: this.inCheck[opponentColor],
         isCheckmate: isCheckmateResult,
-        // Add castling information if it occurred
-        castlingType: null
+        ...additionalData
       };
 
-      if (piece.type === 'king') {
-        if (to.col - from.col === 2) {
-          moveData.castlingType = 'kingside';
-        } else if (to.col - from.col === -2) {
-          moveData.castlingType = 'queenside';
-        }
-      }
       this.onMove(moveData);
     }
   }
+
+  setupPromotionModal() {
+    const promotionOptions = document.querySelectorAll('.promotion-option');
+    promotionOptions.forEach(option => {
+      option.addEventListener('click', () => {
+        const pieceType = option.getAttribute('data-piece');
+        this.handlePromotionChoice(pieceType);
+      });
+    });
+  }
+
+  showPromotionModal(color) {
+    // Set the correct piece images based on color
+    const promotionOptions = document.querySelectorAll('.promotion-option');
+    promotionOptions.forEach(option => {
+      const pieceType = option.getAttribute('data-piece');
+      const img = option.querySelector('.promotion-piece-image');
+      img.src = chessPieces[color][pieceType];
+    });
+
+    // Show the modal
+    this.promotionModal.classList.remove('hidden');
+  }
+
+  hidePromotionModal() {
+    this.promotionModal.classList.add('hidden');
+  }
+
+  handlePromotionChoice(pieceType) {
+    if (!this.pendingPromotion) return;
+
+    const { from, to, color } = this.pendingPromotion;
+
+    // Create the promoted piece
+    const promotedPiece = { type: pieceType, color: color };
+
+    // Place the promoted piece on the board
+    this.board[to.row][to.col] = promotedPiece;
+    this.board[from.row][from.col] = null;
+
+    // Clear pending promotion
+    this.pendingPromotion = null;
+
+    // Hide the modal
+    this.hidePromotionModal();
+
+    // Continue with the move processing
+    this.completeMove(from, to, { promotion: pieceType });
+  }
+
+  // ...existing code...
 
   isCheckmateDetected(color) {
     // If the king is not in check, it's not checkmate

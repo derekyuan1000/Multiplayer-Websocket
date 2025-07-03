@@ -18,33 +18,24 @@ class StockfishWrapper {
         console.log('Attempting to load Stockfish engine...');
 
         try {
-            // Use a more reliable CDN for a newer version of Stockfish
-            const stockfishScript = document.createElement('script');
-            stockfishScript.src = 'https://unpkg.com/stockfish.js@10.0.2/stockfish.js';
-            stockfishScript.onload = () => {
-                console.log('Stockfish script loaded from CDN.');
-                // The new library might initialize differently, let's check for STOCKFISH function
-                if (typeof STOCKFISH === 'function') {
-                    this.engine = STOCKFISH();
-                    this.engine.onmessage = (event) => {
-                        if (this.onMessage) {
-                            this.onMessage(event);
-                        }
-                    };
-                    this.isReady = true;
-                    this.processMessageQueue();
-                } else {
-                    console.error('STOCKFISH function not found after loading script.');
-                    this.useFallbackEngine();
-                }
-            };
-            stockfishScript.onerror = () => {
-                console.warn('Failed to load Stockfish from CDN, using fallback.');
-                this.useFallbackEngine();
-            };
-            document.head.appendChild(stockfishScript);
+            // The stockfish.js library uses a promise that resolves with the engine instance.
+            // There is no need to create a script tag manually.
+            if (typeof stockfish === 'function') {
+                this.engine = await stockfish();
+                this.engine.onmessage = (event) => {
+                    if (this.onMessage) {
+                        this.onMessage(event);
+                    }
+                };
+                this.isReady = true;
+                this.processMessageQueue();
+                console.log('Stockfish engine loaded successfully.');
+            } else {
+                 console.error('Stockfish library not loaded correctly.');
+                 this.useFallbackEngine();
+            }
         } catch (error) {
-            console.warn('Error loading Stockfish from CDN, using fallback.', error);
+            console.warn('Error loading Stockfish engine, using fallback.', error);
             this.useFallbackEngine();
         }
     }
