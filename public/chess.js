@@ -64,10 +64,14 @@ class ChessGame {
   handleStockfishMessage(message) {
     if (typeof message !== 'string') return;
 
+    console.log('Handling Stockfish message:', message);
+
     if (message.startsWith('bestmove')) {
       const move = message.split(' ')[1];
+      console.log('Extracted move:', move);
+
       // Convert UCI move format (e.g., 'e2e4') to our move format
-      if (move && move.length >= 4) {
+      if (move && move.length >= 4 && move !== 'none') {
         const from = {
           row: 8 - parseInt(move[1]),
           col: move[0].charCodeAt(0) - 'a'.charCodeAt(0)
@@ -77,9 +81,70 @@ class ChessGame {
           col: move[2].charCodeAt(0) - 'a'.charCodeAt(0)
         };
 
-        // Apply Stockfish's move
-        this.makeMove({ from, to });
+        console.log('Converted move:', { from, to });
+
+        // Validate the move is legal before applying it
+        if (this.isValidStockfishMove(from, to)) {
+          console.log('Move is valid, applying...');
+          this.makeMove({ from, to });
+        } else {
+          console.log('Invalid move from Stockfish, trying fallback');
+          // If the move is invalid, try to find a legal move
+          this.makeFallbackMove();
+        }
+      } else {
+        console.log('No valid move from Stockfish, making fallback move');
+        this.makeFallbackMove();
       }
+    }
+  }
+
+  // Add method to validate Stockfish moves
+  isValidStockfishMove(from, to) {
+    // Check bounds
+    if (!this.isValidPosition(from.row, from.col) || !this.isValidPosition(to.row, to.col)) {
+      return false;
+    }
+
+    // Check if there's a piece at the from position of the current turn's color
+    const piece = this.board[from.row][from.col];
+    if (!piece || piece.color !== this.currentTurn) {
+      return false;
+    }
+
+    // Get valid moves for this piece and check if the target square is valid
+    const validMoves = this.getValidMoves(from.row, from.col, piece);
+    return validMoves.some(move => move.row === to.row && move.col === to.col);
+  }
+
+  // Add method to make a fallback move when Stockfish fails
+  makeFallbackMove() {
+    console.log('Making fallback move...');
+
+    // Find all possible moves for the current player
+    const allMoves = [];
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = this.board[row][col];
+        if (piece && piece.color === this.currentTurn) {
+          const validMoves = this.getValidMoves(row, col, piece);
+          validMoves.forEach(move => {
+            allMoves.push({
+              from: { row, col },
+              to: { row: move.row, col: move.col }
+            });
+          });
+        }
+      }
+    }
+
+    if (allMoves.length > 0) {
+      // Pick a random legal move
+      const randomMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+      console.log('Making random legal move:', randomMove);
+      this.makeMove(randomMove);
+    } else {
+      console.log('No legal moves available - game should end');
     }
   }
 
@@ -157,13 +222,21 @@ class ChessGame {
   // Add method to get Stockfish's suggestion
   getStockfishMove() {
     const fen = this.getFEN();
-    this.stockfish.evaluatePosition(fen);
+    console.log('Getting Stockfish move for position:', fen);
+    this.stockfish.getBestMove(fen, 2000); // Use getBestMove instead of evaluatePosition
   }
 
   // Add method to play against Stockfish
   playAgainstEngine() {
-    if (this.currentTurn !== this.playerColor) {
+    if (this.currentTurn !== this.playerColor && this.stockfish && this.stockfish.isReady) {
+      console.log('Requesting move from Stockfish...');
       this.getStockfishMove();
+    } else {
+      console.log('Cannot get Stockfish move:', {
+        currentTurn: this.currentTurn,
+        playerColor: this.playerColor,
+        stockfishReady: this.stockfish ? this.stockfish.isReady : false
+      });
     }
   }
 
@@ -551,6 +624,8 @@ class ChessGame {
     const piece = this.board[from.row][from.col];
     let capturedPiece = this.board[to.row][to.col]; // Standard capture
 
+    console.log('Making move:', move, 'Piece:', piece);
+
     // Handle en passant capture
     if (piece.type === 'pawn' && this.enPassantTargetSquare && to.row === this.enPassantTargetSquare.row && to.col === this.enPassantTargetSquare.col) {
       const capturedPawnRow = from.row; // The pawn being captured is on the same row as the attacking pawn
@@ -632,6 +707,9 @@ class ChessGame {
       // Show analyze button
       this.showAnalyzeButton();
     }
+
+    // IMPORTANT: Re-render the board to show the move
+    this.renderBoard();
 
     // Emit the move event if a callback is provided
     if (this.onMove) {

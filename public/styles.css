@@ -1159,6 +1159,10 @@ button:hover {
     background: #27ae60;
 }
 
+.game-card[data-game="stockfish"]:hover::before {
+    background: #95a5a6;
+}
+
 .game-card img {
     width: 120px;
     height: 120px;
@@ -1205,28 +1209,150 @@ button:hover {
     color: #7f8c8d;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .games-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    }
-
-    .game-card {
-        min-height: 280px;
-    }
-
-    .game-card img {
-        width: 100px;
-        height: 100px;
-    }
+/* Stockfish Lobby Styles */
+.stockfish-setup {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin: 30px 0;
 }
 
-@media (max-width: 480px) {
-    .games-grid {
+.color-selection, .difficulty-selection, .stockfish-time-control {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.color-selection h3, .difficulty-selection h3, .stockfish-time-control h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.color-options, .difficulty-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.color-option, .difficulty-option {
+    position: relative;
+}
+
+.color-option input[type="radio"], .difficulty-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.color-option label, .difficulty-option label {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.color-option label:hover, .difficulty-option label:hover {
+    border-color: #3498db;
+    background: #f8f9fa;
+}
+
+.color-option input[type="radio"]:checked + label, .difficulty-option input[type="radio"]:checked + label {
+    border-color: #3498db;
+    background: #e8f4fd;
+    color: #2980b9;
+}
+
+.color-icon {
+    font-size: 24px;
+    margin-right: 12px;
+    min-width: 30px;
+}
+
+.color-label, .difficulty-label {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.difficulty-description {
+    font-size: 12px;
+    color: #6c757d;
+    margin-left: auto;
+    font-style: italic;
+}
+
+.stockfish-time-control {
+    grid-column: 1 / -1;
+}
+
+.stockfish-controls {
+    grid-column: 1 / -1;
+    text-align: center;
+    margin-top: 20px;
+}
+
+#start-stockfish-game {
+    margin: 20px auto;
+    padding: 15px 40px;
+    font-size: 18px;
+    background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+}
+
+#start-stockfish-game:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+}
+
+#leave-stockfish-lobby {
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#leave-stockfish-lobby:hover {
+    background-color: #5a6268;
+}
+
+#stockfish-status {
+    margin-top: 15px;
+    padding: 12px;
+    background: #e8f4fd;
+    border: 1px solid #bee5eb;
+    border-radius: 6px;
+    color: #0c5460;
+    font-weight: 500;
+}
+
+/* Responsive adjustments for Stockfish lobby */
+@media (max-width: 768px) {
+    .stockfish-setup {
         grid-template-columns: 1fr;
+        gap: 20px;
     }
 
-    .game-card {
-        min-height: auto;
+    .color-options, .difficulty-options {
+        gap: 10px;
+    }
+
+    .color-option label, .difficulty-option label {
+        padding: 12px 15px;
     }
 }

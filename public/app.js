@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // DOM elements
   const loginSection = document.getElementById('login-section');
   const gameSelectionSection = document.getElementById('game-selection-section');
+  const stockfishLobbySection = document.getElementById('stockfish-lobby-section');
   const serverSection = document.getElementById('server-section');
   const lobbySection = document.getElementById('lobby-section');
   const gameSection = document.getElementById('game-section');
@@ -13,6 +14,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const blackPlayerElement = document.getElementById('black-player').querySelector('span');
   const leaveGameButton = document.getElementById('leave-game');
   const resignButton = document.getElementById('resign-game');
+
+  // Stockfish lobby elements
+  const leaveStockfishLobbyButton = document.getElementById('leave-stockfish-lobby');
+  const startStockfishGameButton = document.getElementById('start-stockfish-game');
+  const stockfishStatus = document.getElementById('stockfish-status');
 
   // Online users elements
   const onlineUsersList = document.getElementById('online-users-list');
@@ -248,6 +254,9 @@ document.addEventListener('DOMContentLoaded', () => {
           // Request server list for chess
           socket.emit('serverList');
           showSection(serverSection);
+        } else if (gameType === 'stockfish') {
+          // Show Stockfish lobby for computer games
+          showSection(stockfishLobbySection);
         } else {
           // For other games that are coming soon
           alert(`${gameType.charAt(0).toUpperCase() + gameType.slice(1)} is coming soon!`);
@@ -256,78 +265,105 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  leaveGameButton.addEventListener('click', () => {
-    if (confirm('Are you sure you want to leave the game?')) {
-      // Disconnect from current server
-      socket.disconnect();
-
-      // Reconnect to get a new socket ID
-      socket.connect();
-
-      // Reset game state
-      currentServerId = null;
-      currentGameId = null;
-      playerColor = null;
-      chessGame = null;
-
-      // Go back to game selection instead of server list
-      showSection(gameSelectionSection);
-    }
-  });
-
-  // Add lobby event handlers
-  joinWhiteButton.addEventListener('click', () => {
-    if (currentServerId) {
-      socket.emit('joinServerAsColor', currentServerId, playerName, 'white');
-    }
-  });
-
-  joinBlackButton.addEventListener('click', () => {
-    if (currentServerId) {
-      socket.emit('joinServerAsColor', currentServerId, playerName, 'black');
-    }
-  });
-
-  leaveLobbyButton.addEventListener('click', () => {
-    socket.disconnect();
-    socket.connect();
-    currentServerId = null;
-    playerColor = null;
-    isWhitePlayer = false;
-    // Go back to game selection instead of server list
+  // Stockfish lobby event handlers
+  leaveStockfishLobbyButton.addEventListener('click', () => {
     showSection(gameSelectionSection);
   });
 
-  startGameButton.addEventListener('click', () => {
-    if (currentServerId && isWhitePlayer) {
-      const timeControl = getSelectedTimeControl();
-      socket.emit('startGame', currentServerId, timeControl);
-    }
+  startStockfishGameButton.addEventListener('click', () => {
+    startStockfishGame();
   });
 
-  resignButton.addEventListener('click', () => {
-    if (confirm('Are you sure you want to resign?')) {
-      socket.emit('resign', currentServerId, currentGameId);
-    }
-  });
+  function startStockfishGame() {
+    // Get selected options
+    const selectedColor = document.querySelector('input[name="playerColor"]:checked').value;
+    const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
+    const selectedTimeControl = document.querySelector('input[name="sfTimeControl"]:checked').value;
 
-  // Time control event handlers
-  customRadio.addEventListener('change', () => {
-    if (customRadio.checked) {
-      customTimeInputs.classList.remove('hidden');
+    // Determine player color
+    let finalPlayerColor;
+    if (selectedColor === 'random') {
+      finalPlayerColor = Math.random() < 0.5 ? 'white' : 'black';
+    } else {
+      finalPlayerColor = selectedColor;
     }
-  });
 
-  // Add event listeners to all time control radio buttons
-  document.querySelectorAll('input[name="timeControl"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-      if (radio.value !== 'custom') {
-        customTimeInputs.classList.add('hidden');
-      } else {
-        customTimeInputs.classList.remove('hidden');
+    // Set up player info
+    playerColor = finalPlayerColor;
+    const computerColor = finalPlayerColor === 'white' ? 'black' : 'white';
+
+    // Update UI
+    if (finalPlayerColor === 'white') {
+      whitePlayerElement.textContent = `${playerName} (You)`;
+      blackPlayerElement.textContent = 'Stockfish';
+    } else {
+      whitePlayerElement.textContent = 'Stockfish';
+      blackPlayerElement.textContent = `${playerName} (You)`;
+
+      // Flip time controls for black player
+      const timeControlsContainer = document.getElementById('time-controls-container');
+      timeControlsContainer.classList.add('flipped');
+    }
+
+    gameStatus.textContent = 'Playing against Stockfish';
+
+    // Initialize chess game
+    chessGame = new ChessGame(finalPlayerColor);
+
+    // Set up Stockfish
+    if (chessGame.stockfish) {
+      chessGame.stockfish.setSkillLevel(parseInt(selectedDifficulty));
+    }
+
+    // Override the onMove callback to handle Stockfish moves
+    chessGame.onMove = (moveData) => {
+      // Update the last move time for timer tracking
+      if (whiteTimeRemaining > 0 || blackTimeRemaining > 0) {
+        lastMoveTime = new Date();
       }
-    });
-  });
+
+      // After player moves, get Stockfish's response
+      if (chessGame.currentTurn !== playerColor) {
+        setTimeout(() => {
+          chessGame.playAgainstEngine();
+        }, 500); // Small delay to make it feel more natural
+      }
+    };
+
+    // Handle time control
+    if (selectedTimeControl !== 'unlimited') {
+      const [minutes, increment] = selectedTimeControl.split('+').map(num => parseInt(num));
+
+      // Set up time control
+      whiteTimeRemaining = minutes * 60;
+      blackTimeRemaining = minutes * 60;
+      lastMoveTime = new Date();
+
+      // Show time controls
+      const timeControlsContainer = document.getElementById('time-controls-container');
+      timeControlsContainer.style.display = 'flex';
+
+      updateTimeDisplay();
+      startTimer();
+    } else {
+      // Hide time controls for unlimited games
+      const timeControlsContainer = document.getElementById('time-controls-container');
+      timeControlsContainer.style.display = 'none';
+    }
+
+    // Show resign button
+    resignButton.classList.remove('hidden');
+
+    // If computer plays white, make the first move
+    if (finalPlayerColor === 'black') {
+      setTimeout(() => {
+        chessGame.playAgainstEngine();
+      }, 1000);
+    }
+
+    // Transition to game section
+    showSection(gameSection);
+  }
 
   // Helper function to get selected time control
   function getSelectedTimeControl() {
@@ -479,6 +515,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hide all sections
     loginSection.classList.add('hidden');
     gameSelectionSection.classList.add('hidden');
+    stockfishLobbySection.classList.add('hidden');
     serverSection.classList.add('hidden');
     lobbySection.classList.add('hidden');
     gameSection.classList.add('hidden');
@@ -494,7 +531,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     timeInterval = setInterval(() => {
-      if (!chessGame || !gameTimeControl) return;
+      // For Stockfish games, check if we have time remaining values set
+      // For multiplayer games, check if gameTimeControl exists
+      if (!chessGame || (!gameTimeControl && whiteTimeRemaining === 0 && blackTimeRemaining === 0)) return;
 
       const now = new Date();
       const timeSinceLastMove = Math.floor((now - lastMoveTime) / 1000);

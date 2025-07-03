@@ -32,28 +32,131 @@
             <h2>Select a Game</h2>
             <div class="games-grid">
                 <div class="game-card" data-game="chess">
-                    <img src="assets/chess-icon.png" alt="Chess" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><path d=%22M12,4c2.21,0,4,1.79,4,4s-1.79,4-4,4s-4-1.79-4-4S9.79,4,12,4M9,18c0,0.55,0.45,1,1,1h4c0.55,0,1-0.45,1-1v-5h-6V18z%22 fill=%22%233498db%22/></svg>'">
+                    <img src="assets/chess-icon.svg" alt="Chess">
                     <h3>Chess</h3>
                     <p>Play the classic game of strategy with friends or opponents online</p>
                     <button class="select-game-btn">Select</button>
                 </div>
+                <div class="game-card" data-game="stockfish">
+                    <img src="assets/stockfish-icon.svg" alt="Play vs Computer">
+                    <h3>Play vs Computer</h3>
+                    <p>Challenge the powerful Stockfish chess engine in a single-player game</p>
+                    <button class="select-game-btn">Select</button>
+                </div>
                 <div class="game-card" data-game="checkers">
-                    <img src="assets/checkers-icon.png" alt="Checkers" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><path d=%22M4,4H8V8H4V4M10,4H14V8H10V4M16,4H20V8H16V4M4,10H8V14H4V10M10,10H14V14H10V10M16,10H20V14H16V10M4,16H8V20H4V16M10,16H14V20H10V16M16,16H20V20H16V16Z%22 fill=%22%23e74c3c%22/></svg>'">
+                    <img src="assets/checkers-icon.svg" alt="Checkers">
                     <h3>Checkers</h3>
                     <p>Coming soon! Challenge friends to a game of checkers</p>
                     <button class="select-game-btn" disabled>Coming Soon</button>
                 </div>
                 <div class="game-card" data-game="go">
-                    <img src="assets/go-icon.png" alt="Go" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><circle cx=%2212%22 cy=%2212%22 r=%2210%22 fill=%22%23f1c40f%22 /><circle cx=%2212%22 cy=%2212%22 r=%228%22 fill=%22none%22 stroke=%22%23333%22 stroke-width=%220.5%22 /></svg>'">
+                    <img src="assets/go-icon.svg" alt="Go">
                     <h3>Go</h3>
                     <p>Coming soon! Play the ancient board game of territory</p>
                     <button class="select-game-btn" disabled>Coming Soon</button>
                 </div>
                 <div class="game-card" data-game="backgammon">
-                    <img src="assets/backgammon-icon.png" alt="Backgammon" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22 viewBox=%220 0 24 24%22><path d=%22M4,4H20V20H4V4M6,6V18H18V6H6Z%22 fill=%22%2327ae60%22/></svg>'">
+                    <img src="assets/backgammon-icon.svg" alt="Backgammon">
                     <h3>Backgammon</h3>
                     <p>Coming soon! Enjoy this classic dice and strategy game</p>
                     <button class="select-game-btn" disabled>Coming Soon</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stockfish Lobby Section -->
+        <div id="stockfish-lobby-section" class="section hidden">
+            <div class="lobby-header">
+                <h2>Play vs Computer</h2>
+                <button id="leave-stockfish-lobby">Back to Game Selection</button>
+            </div>
+
+            <div class="stockfish-setup">
+                <div class="color-selection">
+                    <h3>Choose Your Color</h3>
+                    <div class="color-options">
+                        <div class="color-option">
+                            <input type="radio" id="play-white" name="playerColor" value="white" checked>
+                            <label for="play-white">
+                                <span class="color-icon">♔</span>
+                                <span class="color-label">Play as White</span>
+                            </label>
+                        </div>
+                        <div class="color-option">
+                            <input type="radio" id="play-black" name="playerColor" value="black">
+                            <label for="play-black">
+                                <span class="color-icon">♚</span>
+                                <span class="color-label">Play as Black</span>
+                            </label>
+                        </div>
+                        <div class="color-option">
+                            <input type="radio" id="play-random" name="playerColor" value="random">
+                            <label for="play-random">
+                                <span class="color-icon">🎲</span>
+                                <span class="color-label">Random</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="difficulty-selection">
+                    <h3>Select Difficulty</h3>
+                    <div class="difficulty-options">
+                        <div class="difficulty-option">
+                            <input type="radio" id="easy" name="difficulty" value="3">
+                            <label for="easy">
+                                <span class="difficulty-label">Easy</span>
+                                <span class="difficulty-description">Beginner friendly</span>
+                            </label>
+                        </div>
+                        <div class="difficulty-option">
+                            <input type="radio" id="medium" name="difficulty" value="10" checked>
+                            <label for="medium">
+                                <span class="difficulty-label">Medium</span>
+                                <span class="difficulty-description">Balanced challenge</span>
+                            </label>
+                        </div>
+                        <div class="difficulty-option">
+                            <input type="radio" id="hard" name="difficulty" value="15">
+                            <label for="hard">
+                                <span class="difficulty-label">Hard</span>
+                                <span class="difficulty-description">Strong opponent</span>
+                            </label>
+                        </div>
+                        <div class="difficulty-option">
+                            <input type="radio" id="expert" name="difficulty" value="20">
+                            <label for="expert">
+                                <span class="difficulty-label">Expert</span>
+                                <span class="difficulty-description">Maximum strength</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stockfish-time-control">
+                    <h3>Time Control</h3>
+                    <div class="time-control-options">
+                        <div class="time-control-option">
+                            <input type="radio" id="sf-unlimited" name="sfTimeControl" value="unlimited" checked>
+                            <label for="sf-unlimited">Unlimited Time</label>
+                            <span class="time-description">No time pressure</span>
+                        </div>
+                        <div class="time-control-option">
+                            <input type="radio" id="sf-blitz-3-2" name="sfTimeControl" value="3+2">
+                            <label for="sf-blitz-3-2">3+2 (Blitz)</label>
+                            <span class="time-description">3 minutes + 2 second increment</span>
+                        </div>
+                        <div class="time-control-option">
+                            <input type="radio" id="sf-rapid-10-5" name="sfTimeControl" value="10+5">
+                            <label for="sf-rapid-10-5">10+5 (Rapid)</label>
+                            <span class="time-description">10 minutes + 5 second increment</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stockfish-controls">
+                    <button id="start-stockfish-game" class="start-game-btn">Start Game</button>
+                    <div id="stockfish-status" class="lobby-status">Configure your game settings above</div>
                 </div>
             </div>
         </div>
