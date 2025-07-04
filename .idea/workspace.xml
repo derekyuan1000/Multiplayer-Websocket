@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f77277ae-7145-4a46-8ada-ecec86b96798" name="Changes" comment="add images and stockfish">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/lib/stockfish.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/lib/stockfish.js" afterDir="false" />
-    </list>
+    <list default="true" id="f77277ae-7145-4a46-8ada-ecec86b96798" name="Changes" comment="add images and stockfish" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -100,7 +96,7 @@
       <workItem from="1750969314783" duration="1199000" />
       <workItem from="1750972088197" duration="980000" />
       <workItem from="1751492102200" duration="573000" />
-      <workItem from="1751576810963" duration="2228000" />
+      <workItem from="1751576810963" duration="2909000" />
     </task>
     <task id="LOCAL-00001" summary="fix for vercel">
       <option name="closed" value="true" />
@@ -134,7 +130,15 @@
       <option name="project" value="LOCAL" />
       <updated>1751578839005</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="add images and stockfish">
+      <option name="closed" value="true" />
+      <created>1751579853457</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1751579853457</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
