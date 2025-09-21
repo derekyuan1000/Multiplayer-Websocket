@@ -3,382 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teams</title>
+    <title>Multiplayer Chess</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Load Socket.IO from CDN -->
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Chess Game Platform</h1>
-        </header>
-
-        <div id="login-section" class="section">
-            <h2>Enter Your Name</h2>
+        <div id="login-screen" class="screen">
+            <h1>Multiplayer Chess</h1>
             <div class="form-group">
-                <input type="text" id="player-name" placeholder="Your name">
-                <button id="login-button">Continue</button>
+                <label for="player-name">Your Name:</label>
+                <input type="text" id="player-name" placeholder="Enter your name">
             </div>
+            <button id="register-btn">Continue</button>
+        </div>
 
-            <!-- Online Users Section -->
-            <div id="online-users-section">
-                <h3>Online Users</h3>
-                <div id="online-users-list" class="online-users-list">
-                    <p class="no-users">No other users online</p>
-                </div>
+        <div id="server-lobby-screen" class="screen hidden">
+            <h1>Select a Server</h1>
+            <div class="servers-grid" id="servers-grid">
+                <!-- Server cards will be dynamically populated -->
             </div>
         </div>
 
-        <div id="game-selection-section" class="section hidden">
-            <h2>Select a Game</h2>
-            <div class="games-grid">
-                <div class="game-card" data-game="chess">
-                    <img src="assets/chess-icon.svg" alt="Chess">
-                    <h3>Chess</h3>
-                    <p>Play the classic game of strategy with friends or opponents online</p>
-                    <button class="select-game-btn">Select</button>
+        <div id="color-selection-screen" class="screen hidden">
+            <h1>Choose Your Color</h1>
+            <div class="server-info">
+                <h3 id="selected-server-title">Server 1</h3>
+                <p id="server-status">Ready to play</p>
+            </div>
+            <div class="color-options">
+                <div class="color-option" data-color="white">
+                    <div class="piece white-king"></div>
+                    <span>White</span>
+                    <span class="player-name"></span>
                 </div>
-                <div class="game-card" data-game="stockfish">
-                    <img src="assets/stockfish-icon.svg" alt="Play vs Computer">
-                    <h3>Play vs Computer</h3>
-                    <p>Challenge the powerful Stockfish chess engine in a single-player game</p>
-                    <button class="select-game-btn">Select</button>
-                </div>
-                <div class="game-card" data-game="checkers">
-                    <img src="assets/checkers-icon.svg" alt="Checkers">
-                    <h3>Checkers</h3>
-                    <p>Coming soon! Challenge friends to a game of checkers</p>
-                    <button class="select-game-btn" disabled>Coming Soon</button>
-                </div>
-                <div class="game-card" data-game="go">
-                    <img src="assets/go-icon.svg" alt="Go">
-                    <h3>Go</h3>
-                    <p>Coming soon! Play the ancient board game of territory</p>
-                    <button class="select-game-btn" disabled>Coming Soon</button>
-                </div>
-                <div class="game-card" data-game="backgammon">
-                    <img src="assets/backgammon-icon.svg" alt="Backgammon">
-                    <h3>Backgammon</h3>
-                    <p>Coming soon! Enjoy this classic dice and strategy game</p>
-                    <button class="select-game-btn" disabled>Coming Soon</button>
+                <div class="color-option" data-color="black">
+                    <div class="piece black-king"></div>
+                    <span>Black</span>
+                    <span class="player-name"></span>
                 </div>
             </div>
+            <button id="back-to-lobby-btn">Back to Lobby</button>
         </div>
 
-        <!-- Stockfish Lobby Section -->
-        <div id="stockfish-lobby-section" class="section hidden">
-            <div class="lobby-header">
-                <h2>Play vs Computer</h2>
-                <button id="leave-stockfish-lobby">Back to Game Selection</button>
-            </div>
-
-            <div class="stockfish-setup">
-                <div class="color-selection">
-                    <h3>Choose Your Color</h3>
-                    <div class="color-options">
-                        <div class="color-option">
-                            <input type="radio" id="play-white" name="playerColor" value="white" checked>
-                            <label for="play-white">
-                                <span class="color-icon">♔</span>
-                                <span class="color-label">Play as White</span>
-                            </label>
-                        </div>
-                        <div class="color-option">
-                            <input type="radio" id="play-black" name="playerColor" value="black">
-                            <label for="play-black">
-                                <span class="color-icon">♚</span>
-                                <span class="color-label">Play as Black</span>
-                            </label>
-                        </div>
-                        <div class="color-option">
-                            <input type="radio" id="play-random" name="playerColor" value="random">
-                            <label for="play-random">
-                                <span class="color-icon">🎲</span>
-                                <span class="color-label">Random</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="difficulty-selection">
-                    <h3>Select Difficulty</h3>
-                    <div class="difficulty-options">
-                        <div class="difficulty-option">
-                            <input type="radio" id="easy" name="difficulty" value="3">
-                            <label for="easy">
-                                <span class="difficulty-label">Easy</span>
-                                <span class="difficulty-description">Beginner friendly</span>
-                            </label>
-                        </div>
-                        <div class="difficulty-option">
-                            <input type="radio" id="medium" name="difficulty" value="10" checked>
-                            <label for="medium">
-                                <span class="difficulty-label">Medium</span>
-                                <span class="difficulty-description">Balanced challenge</span>
-                            </label>
-                        </div>
-                        <div class="difficulty-option">
-                            <input type="radio" id="hard" name="difficulty" value="15">
-                            <label for="hard">
-                                <span class="difficulty-label">Hard</span>
-                                <span class="difficulty-description">Strong opponent</span>
-                            </label>
-                        </div>
-                        <div class="difficulty-option">
-                            <input type="radio" id="expert" name="difficulty" value="20">
-                            <label for="expert">
-                                <span class="difficulty-label">Expert</span>
-                                <span class="difficulty-description">Maximum strength</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stockfish-time-control">
-                    <h3>Time Control</h3>
-                    <div class="time-control-options">
-                        <div class="time-control-option">
-                            <input type="radio" id="sf-unlimited" name="sfTimeControl" value="unlimited" checked>
-                            <label for="sf-unlimited">Unlimited Time</label>
-                            <span class="time-description">No time pressure</span>
-                        </div>
-                        <div class="time-control-option">
-                            <input type="radio" id="sf-blitz-3-2" name="sfTimeControl" value="3+2">
-                            <label for="sf-blitz-3-2">3+2 (Blitz)</label>
-                            <span class="time-description">3 minutes + 2 second increment</span>
-                        </div>
-                        <div class="time-control-option">
-                            <input type="radio" id="sf-rapid-10-5" name="sfTimeControl" value="10+5">
-                            <label for="sf-rapid-10-5">10+5 (Rapid)</label>
-                            <span class="time-description">10 minutes + 5 second increment</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stockfish-controls">
-                    <button id="start-stockfish-game" class="start-game-btn">Start Game</button>
-                    <div id="stockfish-status" class="lobby-status">Configure your game settings above</div>
-                </div>
-            </div>
+        <div id="waiting-screen" class="screen hidden">
+            <h1>Waiting for Opponent</h1>
+            <div class="loader"></div>
+            <p id="waiting-message">Please wait while we find an opponent for you...</p>
         </div>
 
-        <div id="server-section" class="section hidden">
-            <h2>Available Servers</h2>
-            <div id="server-list" class="server-list">
-                <!-- Server list will be populated here -->
-            </div>
-
-            <!-- Online Users Section for Server Selection -->
-            <div id="online-users-section">
-                <h3>Online Users</h3>
-                <div id="server-online-users-list" class="online-users-list">
-                    <p class="no-users">No other users online</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="lobby-section" class="section hidden">
-            <div class="lobby-header">
-                <h2 id="lobby-server-name">Chess Server</h2>
-                <button id="leave-lobby">Leave Server</button>
-            </div>
-
-            <div class="player-slots">
-                <div class="slot white-slot">
-                    <div class="slot-header">
-                        <span class="slot-icon">♔</span>
-                        <span class="slot-title">White Player</span>
-                    </div>
-                    <div class="slot-content" id="white-slot">
-                        <button class="join-slot-btn" id="join-white">Join as White</button>
-                        <div class="player-info hidden" id="white-player-info">
-                            <span class="player-name"></span>
-                            <span class="player-status">(You)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="slot black-slot">
-                    <div class="slot-header">
-                        <span class="slot-icon">♚</span>
-                        <span class="slot-title">Black Player</span>
-                    </div>
-                    <div class="slot-content" id="black-slot">
-                        <button class="join-slot-btn" id="join-black">Join as Black</button>
-                        <div class="player-info hidden" id="black-player-info">
-                            <span class="player-name"></span>
-                            <span class="player-status">(You)</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="lobby-controls">
-                <div id="time-control-section" class="time-control-section hidden">
-                    <h3>Select Time Control</h3>
-                    <div class="time-control-options">
-                        <div class="time-control-option">
-                            <input type="radio" id="blitz-3-2" name="timeControl" value="3+2" checked>
-                            <label for="blitz-3-2">3+2 (Blitz)</label>
-                            <span class="time-description">3 minutes + 2 second increment</span>
-                        </div>
-                        <div class="time-control-option">
-                            <input type="radio" id="blitz-5-3" name="timeControl" value="5+3">
-                            <label for="blitz-5-3">5+3 (Blitz)</label>
-                            <span class="time-description">5 minutes + 3 second increment</span>
-                        </div>
-                        <div class="time-control-option">
-                            <input type="radio" id="rapid-10-5" name="timeControl" value="10+5">
-                            <label for="rapid-10-5">10+5 (Rapid)</label>
-                            <span class="time-description">10 minutes + 5 second increment</span>
-                        </div>
-                        <div class="time-control-option">
-                            <input type="radio" id="rapid-15-10" name="timeControl" value="15+10">
-                            <label for="rapid-15-10">15+10 (Rapid)</label>
-                            <span class="time-description">15 minutes + 10 second increment</span>
-                        </div>
-                        <div class="time-control-option">
-                            <input type="radio" id="custom" name="timeControl" value="custom">
-                            <label for="custom">Custom</label>
-                            <div class="custom-time-inputs hidden" id="custom-time-inputs">
-                                <div class="input-group">
-                                    <label for="custom-minutes">Initial Minutes:</label>
-                                    <input type="number" id="custom-minutes" min="1" max="180" value="10">
-                                </div>
-                                <div class="input-group">
-                                    <label for="custom-increment">Increment (seconds):</label>
-                                    <input type="number" id="custom-increment" min="0" max="60" value="5">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <button id="start-game-btn" class="start-game-btn hidden" disabled>Start Game</button>
-                <div id="lobby-status" class="lobby-status">Waiting for players to join...</div>
-            </div>
-
-            <!-- Online Users Section for Lobby -->
-            <div id="online-users-section">
-                <h3>Online Users</h3>
-                <div id="lobby-online-users-list" class="online-users-list">
-                    <p class="no-users">No other users online</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="game-section" class="section hidden">
+        <div id="game-screen" class="screen hidden">
             <div class="game-info">
-                <h2>Chess Game</h2>
-                <div id="game-status">Waiting for opponent...</div>
-                <div id="player-info">
-                    <div id="white-player">White: <span></span></div>
-                    <div id="black-player">Black: <span></span></div>
+                <div class="player-info" id="opponent-info">
+                    <span class="player-name">Opponent: <span id="opponent-name"></span></span>
+                    <span class="player-color" id="opponent-color"></span>
                 </div>
-                <div id="current-turn">Current turn: <span>White</span></div>
-            </div>
-            <div class="game-board-container">
-                <div class="time-controls" id="time-controls-container">
-                    <div class="time-control black-time">
-                        <div class="player-label">Black</div>
-                        <div class="time-display" id="black-time">10:00</div>
-                    </div>
-                    <div class="time-control white-time">
-                        <div class="player-label">White</div>
-                        <div class="time-display" id="white-time">10:00</div>
-                    </div>
-                </div>
-                <div class="chess-board-wrapper">
-                    <div class="board-notation">
-                        <div class="ranks-notation">
-                            <div class="rank-label">8</div>
-                            <div class="rank-label">7</div>
-                            <div class="rank-label">6</div>
-                            <div class="rank-label">5</div>
-                            <div class="rank-label">4</div>
-                            <div class="rank-label">3</div>
-                            <div class="rank-label">2</div>
-                            <div class="rank-label">1</div>
-                        </div>
-                        <div class="board-container">
-                            <div id="chessboard" class="chessboard"></div>
-                            <div class="files-notation">
-                                <div class="file-label">a</div>
-                                <div class="file-label">b</div>
-                                <div class="file-label">c</div>
-                                <div class="file-label">d</div>
-                                <div class="file-label">e</div>
-                                <div class="file-label">f</div>
-                                <div class="file-label">g</div>
-                                <div class="file-label">h</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <button id="leave-game">Leave Game</button>
-            <button id="resign-game" class="resign-game-btn hidden">Resign</button>
-            <button id="analyze-game" class="analyze-game-btn hidden">Analyze Game</button>
-            <div id="analysis-section" class="analysis-section hidden">
-                <div class="analysis-header">
-                    <h3>Game Analysis</h3>
-                    <div class="analysis-controls">
-                        <button id="prev-move">◀</button>
-                        <span id="move-number">Move 1</span>
-                        <button id="next-move">▶</button>
-                    </div>
-                </div>
-                <div class="analysis-content">
-                    <div class="best-move-container">
-                        <span>Best move:</span>
-                        <button id="best-move" class="best-move-button" disabled>...</button>
-                        <span id="evaluation-score">0.0</span>
-                    </div>
-                    <canvas id="eval-graph" width="600" height="200"></canvas>
-                </div>
-            </div>
-        </div>
 
-        <!-- Promotion Modal -->
-        <div id="promotion-modal" class="promotion-modal hidden">
-            <div class="promotion-modal-content">
-                <h3>Choose Promotion Piece</h3>
-                <div class="promotion-options">
-                    <div class="promotion-option" data-piece="queen">
-                        <img src="" alt="Queen" class="promotion-piece-image">
-                        <span>Queen</span>
-                    </div>
-                    <div class="promotion-option" data-piece="rook">
-                        <img src="" alt="Rook" class="promotion-piece-image">
-                        <span>Rook</span>
-                    </div>
-                    <div class="promotion-option" data-piece="bishop">
-                        <img src="" alt="Bishop" class="promotion-piece-image">
-                        <span>Bishop</span>
-                    </div>
-                    <div class="promotion-option" data-piece="knight">
-                        <img src="" alt="Knight" class="promotion-piece-image">
-                        <span>Knight</span>
-                    </div>
+                <div id="game-status">White's turn</div>
+
+                <div class="player-info" id="player-info">
+                    <span class="player-name">You: <span id="your-name"></span></span>
+                    <span class="player-color" id="your-color"></span>
                 </div>
+            </div>
+
+            <div class="chessboard" id="chessboard"></div>
+
+            <div class="game-controls">
+                <button id="start-game-btn" class="hidden">Start Game</button>
+                <button id="resign-btn" class="hidden">Resign</button>
+                <button id="back-to-server-btn">Back to Server Lobby</button>
             </div>
         </div>
     </div>
 
-    <script src="https://unpkg.com/stockfish.js@10.0.2/stockfish.js"></script>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/lib/stockfish.js"></script>
+    <!-- Remove local Socket.IO reference -->
+    <script src="api-client.js"></script>
     <script src="chess.js"></script>
     <script src="app.js"></script>
-
-    <div id="chat-container" class="chat-container">
-        <div class="chat-header">
-            <div class="chat-title">Chat</div>
-            <button id="toggle-chat-button" class="toggle-chat-button">−</button>
-        </div>
-        <div id="chat-messages" class="chat-messages"></div>
-        <div class="chat-input-container">
-            <input type="text" id="chat-input" placeholder="Type a message...">
-            <button id="send-chat-button">Send</button>
-        </div>
-    </div>
 </body>
 </html>

@@ -1,670 +1,584 @@
-document.addEventListener('DOMContentLoaded', () => {
-  // DOM elements
-  const loginSection = document.getElementById('login-section');
-  const gameSelectionSection = document.getElementById('game-selection-section');
-  const stockfishLobbySection = document.getElementById('stockfish-lobby-section');
-  const serverSection = document.getElementById('server-section');
-  const lobbySection = document.getElementById('lobby-section');
-  const gameSection = document.getElementById('game-section');
-  const playerNameInput = document.getElementById('player-name');
-  const loginButton = document.getElementById('login-button');
-  const serverList = document.getElementById('server-list');
-  const gameStatus = document.getElementById('game-status');
-  const whitePlayerElement = document.getElementById('white-player').querySelector('span');
-  const blackPlayerElement = document.getElementById('black-player').querySelector('span');
-  const leaveGameButton = document.getElementById('leave-game');
-  const resignButton = document.getElementById('resign-game');
-
-  // Stockfish lobby elements
-  const leaveStockfishLobbyButton = document.getElementById('leave-stockfish-lobby');
-  const startStockfishGameButton = document.getElementById('start-stockfish-game');
-  const stockfishStatus = document.getElementById('stockfish-status');
-
-  // Online users elements
-  const onlineUsersList = document.getElementById('online-users-list');
-  const serverOnlineUsersList = document.getElementById('server-online-users-list');
-  const lobbyOnlineUsersList = document.getElementById('lobby-online-users-list');
-
-  // Lobby elements
-  const lobbyServerName = document.getElementById('lobby-server-name');
-  const leaveLobbyButton = document.getElementById('leave-lobby');
-  const joinWhiteButton = document.getElementById('join-white');
-  const joinBlackButton = document.getElementById('join-black');
-  const whitePlayerInfo = document.getElementById('white-player-info');
-  const blackPlayerInfo = document.getElementById('black-player-info');
-  const startGameButton = document.getElementById('start-game-btn');
-  const lobbyStatus = document.getElementById('lobby-status');
-
-  // Time control elements
-  const timeControlSection = document.getElementById('time-control-section');
-  const customTimeInputs = document.getElementById('custom-time-inputs');
-  const customRadio = document.getElementById('custom');
-  const customMinutes = document.getElementById('custom-minutes');
-  const customIncrement = document.getElementById('custom-increment');
-
-  // Time display elements
-  const whiteTimeDisplay = document.getElementById('white-time');
-  const blackTimeDisplay = document.getElementById('black-time');
-  const whiteTimeControl = document.querySelector('.white-time');
-  const blackTimeControl = document.querySelector('.black-time');
-
-  // Chat elements
-  const chatContainer = document.getElementById('chat-container');
-  const chatMessages = document.getElementById('chat-messages');
-  const chatInput = document.getElementById('chat-input');
-  const sendChatButton = document.getElementById('send-chat-button');
-  const toggleChatButton = document.getElementById('toggle-chat-button');
-
-  // Game selection elements
-  const gameCards = document.querySelectorAll('.game-card');
-  const selectGameButtons = document.querySelectorAll('.select-game-btn');
-
-  // Game state
-  let playerName = '';
-  let currentServerId = null;
-  let currentGameId = null;
-  let playerColor = null;
-  let chessGame = null;
-  let isWhitePlayer = false;
-  let selectedGame = null;
-
-  // Time control state
-  let gameTimeControl = null;
-  let whiteTimeRemaining = 0;
-  let blackTimeRemaining = 0;
-  let timeInterval = null;
-  let lastMoveTime = null;
-
-  // Connect to Socket.IO server
-  const socket = io({
-    transports: ['websocket', 'polling'],
-    path: '/socket.io/'
-  });
-
-  // Socket.IO event handlers
-  socket.on('connect', () => {
-    console.log('Connected to server with ID:', socket.id);
-  });
-
-  socket.on('serverList', (servers) => {
-    renderServerList(servers);
-  });
-
-  socket.on('onlineUsers', (users) => {
-    renderOnlineUsers(users);
-  });
-
-  socket.on('joinedServer', (server) => {
-    currentServerId = server.id;
-    lobbyServerName.textContent = server.name;
-    updateLobbyDisplay(server);
-    showSection(lobbySection);
-  });
-
-  socket.on('serverError', (errorMessage) => {
-    alert(`Server error: ${errorMessage}`);
-  });
-
-  socket.on('gameStarted', (game) => {
-    currentGameId = game.id;
-
-    // Initialize time control
-    gameTimeControl = game.timeControl;
-    whiteTimeRemaining = gameTimeControl.whiteTimeRemaining;
-    blackTimeRemaining = gameTimeControl.blackTimeRemaining;
-    lastMoveTime = new Date(game.timeControl.lastMoveTime);
-
-    // Update time displays
-    updateTimeDisplay();
-
-    // Start the timer
-    startTimer();
-
-    // Determine player color
-    if (game.whitePlayer.id === socket.id) {
-      playerColor = 'white';
-      whitePlayerElement.textContent = `${game.whitePlayer.name} (You)`;
-      blackPlayerElement.textContent = game.blackPlayer.name;
-      isWhitePlayer = true;
-    } else {
-      playerColor = 'black';
-      whitePlayerElement.textContent = game.whitePlayer.name;
-      blackPlayerElement.textContent = `${game.blackPlayer.name} (You)`;
-      isWhitePlayer = false;
-
-      // Flip time controls for black player
-      const timeControlsContainer = document.getElementById('time-controls-container');
-      timeControlsContainer.classList.add('flipped');
-    }
-
-    gameStatus.textContent = 'Game started!';
-
-    // Initialize chess game with the player's color
-    chessGame = new ChessGame(playerColor);
-    chessGame.onMove = (move) => {
-      socket.emit('makeMove', currentServerId, currentGameId, move);
+/**
+ * Chess Game Frontend with Server Lobby System
+ * Handles UI interactions and WebSocket communication for the multiplayer chess game
+ */
+(function() {
+    // Game state
+    let socket;
+    let playerInfo = {
+        id: null,
+        name: null,
+        color: null,
+        currentServer: null
     };
+    let gameState = {
+        id: null,
+        serverId: null,
+        opponent: null,
+        status: 'waiting', // waiting, active, finished
+        turn: 'white',
+        selectedPiece: null,
+        validMoves: []
+    };
+    let chess = new Chess();
+    let serverLobbies = {};
 
-    // Show resign button
-    resignButton.classList.remove('hidden');
-
-    // Transition to the game section
-    showSection(gameSection);
-  });
-
-  socket.on('moveMade', (game) => {
-    if (!chessGame) return;
-
-    // Update time control state from server
-    if (game.timeControl) {
-      whiteTimeRemaining = game.timeControl.whiteTimeRemaining;
-      blackTimeRemaining = game.timeControl.blackTimeRemaining;
-      lastMoveTime = new Date(game.timeControl.lastMoveTime);
-      updateTimeDisplay();
-    }
-
-    // Get the last move made
-    const lastMove = game.moves[game.moves.length - 1];
-
-    // Apply the move if it's from the other player
-    if (lastMove.player !== playerColor) {
-      // Extract the actual move data from the lastMove object
-      const moveData = lastMove.move || lastMove;
-      chessGame.applyRemoteMove(moveData);
-    }
-  });
-
-  socket.on('gameEnded', (game) => {
-    let message = 'Game ended: ';
-
-    if (game.endReason === 'playerDisconnected') {
-      message += 'Opponent disconnected';
-    } else if (game.endReason === 'resignation') {
-      message += `${game.winner === 'white' ? 'Black' : 'White'} resigned`;
-    } else {
-      message += game.endReason;
-    }
-
-    gameStatus.textContent = message;
-
-    // Stop the timer when game ends
-    stopTimer();
-
-    // Disable the chessboard
+    // DOM elements
+    const loginScreen = document.getElementById('login-screen');
+    const serverLobbyScreen = document.getElementById('server-lobby-screen');
+    const colorSelectionScreen = document.getElementById('color-selection-screen');
+    const waitingScreen = document.getElementById('waiting-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const playerNameInput = document.getElementById('player-name');
+    const registerBtn = document.getElementById('register-btn');
+    const serversGrid = document.getElementById('servers-grid');
+    const selectedServerTitle = document.getElementById('selected-server-title');
+    const serverStatus = document.getElementById('server-status');
+    const colorOptions = document.querySelectorAll('.color-option');
+    const backToLobbyBtn = document.getElementById('back-to-lobby-btn');
+    const backToServerBtn = document.getElementById('back-to-server-btn');
+    const waitingMessage = document.getElementById('waiting-message');
+    const opponentName = document.getElementById('opponent-name');
+    const opponentColor = document.getElementById('opponent-color');
+    const yourName = document.getElementById('your-name');
+    const yourColor = document.getElementById('your-color');
+    const gameStatus = document.getElementById('game-status');
     const chessboard = document.getElementById('chessboard');
-    chessboard.style.pointerEvents = 'none';
-    chessboard.style.opacity = '0.7';
+    const startGameBtn = document.getElementById('start-game-btn');
 
-    // Hide resign button
-    resignButton.classList.add('hidden');
-
-    // Show analyze button when game ends
-    if (chessGame) {
-      chessGame.showAnalyzeButton();
-    }
-  });
-
-  socket.on('serverUpdated', (server) => {
-    // Update the server in the server list
-    const serverElement = document.querySelector(`[data-server-id="${server.id}"]`);
-    if (serverElement) {
-      const whiteCount = server.whitePlayer ? 1 : 0;
-      const blackCount = server.blackPlayer ? 1 : 0;
-      const totalPlayers = whiteCount + blackCount;
-
-      const playersCount = serverElement.querySelector('.players-count');
-      playersCount.textContent = `${totalPlayers}/2 players`;
-
-      const joinButton = serverElement.querySelector('button');
-      joinButton.disabled = server.gameStarted;
+    // Initialize the game
+    function init() {
+        connectToServer();
+        setupEventListeners();
+        createChessboard();
     }
 
-    // Update lobby display if we're currently in this server's lobby
-    if (currentServerId === server.id && !lobbySection.classList.contains('hidden')) {
-      updateLobbyDisplay(server);
+    // Connect to WebSocket server
+    function connectToServer() {
+        // Connect to dedicated game server on port 3002
+        socket = io('http://localhost:3002');
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('registered', (data) => {
+            playerInfo.id = data.id;
+            playerInfo.name = data.name;
+            showScreen(serverLobbyScreen);
+        });
+
+        // Handle server lobby updates
+        socket.on('serverLobbies', (lobbies) => {
+            serverLobbies = lobbies;
+            updateServerLobby();
+        });
+
+        // Handle server selection
+        socket.on('serverSelected', ({ serverId, server }) => {
+            playerInfo.currentServer = serverId;
+            gameState.serverId = serverId;
+            selectedServerTitle.textContent = `Server ${serverId}`;
+            updateServerInfo(server);
+            updateColorSelections(server);
+            showScreen(colorSelectionScreen);
+        });
+
+        socket.on('gameStarted', (data) => {
+            gameState.id = data.gameId;
+            gameState.serverId = data.serverId;
+            gameState.status = 'active';
+            gameState.turn = data.turn;
+
+            // Determine player colors and opponent info
+            if (data.white.id === socket.id) {
+                playerInfo.color = 'white';
+                gameState.opponent = {
+                    id: data.black.id,
+                    name: data.black.name,
+                    color: 'black'
+                };
+            } else {
+                playerInfo.color = 'black';
+                gameState.opponent = {
+                    id: data.white.id,
+                    name: data.white.name,
+                    color: 'white'
+                };
+            }
+
+            // Update UI
+            opponentName.textContent = gameState.opponent.name;
+            opponentColor.textContent = `(${gameState.opponent.color})`;
+            yourName.textContent = playerInfo.name;
+            yourColor.textContent = `(${playerInfo.color})`;
+
+            updateGameStatus();
+            showScreen(gameScreen);
+        });
+
+        socket.on('moveMade', (data) => {
+            // Update game state
+            gameState.turn = data.turn;
+
+            // Make the move on the board
+            const move = data.move;
+            chess.makeMove(move);
+            updateBoard();
+            updateGameStatus();
+
+            // Check for game end conditions
+            checkGameEnd();
+        });
+
+        socket.on('playerDisconnected', (data) => {
+            alert(data.message);
+            showScreen(serverLobbyScreen);
+        });
+
+        socket.on('error', (data) => {
+            alert(`Error: ${data.message}`);
+        });
     }
-  });
 
-  // UI event handlers
-  loginButton.addEventListener('click', () => {
-    playerName = playerNameInput.value.trim();
+    // Update server lobby display
+    function updateServerLobby() {
+        serversGrid.innerHTML = '';
 
-    if (!playerName) {
-      alert('Please enter your name');
-      return;
+        Object.values(serverLobbies).forEach(server => {
+            const serverCard = createServerCard(server);
+            serversGrid.appendChild(serverCard);
+        });
     }
 
-    // Send the user's name to the server
-    socket.emit('setUserName', playerName);
+    // Create a server card element
+    function createServerCard(server) {
+        const card = document.createElement('div');
+        card.className = `server-card ${server.status}`;
+        card.dataset.serverId = server.id;
 
-    // Show game selection screen instead of directly going to server list
-    showSection(gameSelectionSection);
-  });
+        // Prevent clicking on in-game servers
+        if (server.status !== 'in-game') {
+            card.addEventListener('click', () => selectServer(server.id));
+        }
 
-  // Game selection event handlers
-  gameCards.forEach(card => {
-    const gameType = card.getAttribute('data-game');
-    const selectButton = card.querySelector('.select-game-btn');
+        const header = document.createElement('div');
+        header.className = 'server-header';
 
-    if (!selectButton.disabled) {
-      selectButton.addEventListener('click', () => {
-        selectedGame = gameType;
+        const title = document.createElement('div');
+        title.className = 'server-title';
+        title.textContent = `Server ${server.id}`;
 
-        if (gameType === 'chess') {
-          // Request server list for chess
-          socket.emit('serverList');
-          showSection(serverSection);
-        } else if (gameType === 'stockfish') {
-          // Show Stockfish lobby for computer games
-          showSection(stockfishLobbySection);
+        const status = document.createElement('div');
+        status.className = `server-status ${server.status}`;
+        status.textContent = server.status;
+
+        header.appendChild(title);
+        header.appendChild(status);
+
+        const players = document.createElement('div');
+        players.className = 'server-players';
+
+        // White player slot
+        const whiteSlot = document.createElement('div');
+        whiteSlot.className = `server-player white ${server.white ? 'occupied' : ''}`;
+
+        const whiteLabel = document.createElement('div');
+        whiteLabel.className = 'server-player-label';
+        whiteLabel.textContent = 'White';
+
+        const whiteName = document.createElement('div');
+        whiteName.className = 'server-player-name';
+        whiteName.textContent = server.white ? server.white.name : 'Available';
+
+        whiteSlot.appendChild(whiteLabel);
+        whiteSlot.appendChild(whiteName);
+
+        // Black player slot
+        const blackSlot = document.createElement('div');
+        blackSlot.className = `server-player black ${server.black ? 'occupied' : ''}`;
+
+        const blackLabel = document.createElement('div');
+        blackLabel.className = 'server-player-label';
+        blackLabel.textContent = 'Black';
+
+        const blackName = document.createElement('div');
+        blackName.className = 'server-player-name';
+        blackName.textContent = server.black ? server.black.name : 'Available';
+
+        blackSlot.appendChild(blackLabel);
+        blackSlot.appendChild(blackName);
+
+        players.appendChild(whiteSlot);
+        players.appendChild(blackSlot);
+
+        card.appendChild(header);
+        card.appendChild(players);
+
+        return card;
+    }
+
+    // Select a server
+    function selectServer(serverId) {
+        socket.emit('selectServer', serverId);
+    }
+
+    // Update server info display
+    function updateServerInfo(server) {
+        let statusText = '';
+        switch(server.status) {
+            case 'available':
+                statusText = 'Ready for players';
+                break;
+            case 'waiting':
+                statusText = 'Waiting for opponent';
+                break;
+            case 'ready':
+                statusText = 'Ready to start game';
+                break;
+            case 'in-game':
+                statusText = 'Game in progress';
+                break;
+        }
+        serverStatus.textContent = statusText;
+    }
+
+    // Update UI based on color selections in current server
+    function updateColorSelections(server) {
+        colorOptions.forEach(option => {
+            const color = option.dataset.color;
+            const nameSpan = option.querySelector('.player-name');
+
+            // Reset classes
+            option.classList.remove('selected', 'taken');
+            option.removeAttribute('disabled');
+
+            // Check if this color is selected by the current player
+            if (server[color] && server[color].id === playerInfo.id) {
+                option.classList.add('selected');
+                nameSpan.textContent = `(${playerInfo.name})`;
+            }
+            // Check if this color is selected by another player
+            else if (server[color]) {
+                option.classList.add('taken');
+                option.setAttribute('disabled', 'disabled');
+                nameSpan.textContent = `(${server[color].name})`;
+            } else {
+                // Color is available
+                nameSpan.textContent = '';
+            }
+        });
+
+        // Show/hide start button
+        if (server.white && server.white.id === playerInfo.id && server.black) {
+            startGameBtn.classList.remove('hidden');
         } else {
-          // For other games that are coming soon
-          alert(`${gameType.charAt(0).toUpperCase() + gameType.slice(1)} is coming soon!`);
+            startGameBtn.classList.add('hidden');
         }
-      });
-    }
-  });
-
-  // Stockfish lobby event handlers
-  leaveStockfishLobbyButton.addEventListener('click', () => {
-    showSection(gameSelectionSection);
-  });
-
-  startStockfishGameButton.addEventListener('click', () => {
-    startStockfishGame();
-  });
-
-  function startStockfishGame() {
-    // Get selected options
-    const selectedColor = document.querySelector('input[name="playerColor"]:checked').value;
-    const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
-    const selectedTimeControl = document.querySelector('input[name="sfTimeControl"]:checked').value;
-
-    // Determine player color
-    let finalPlayerColor;
-    if (selectedColor === 'random') {
-      finalPlayerColor = Math.random() < 0.5 ? 'white' : 'black';
-    } else {
-      finalPlayerColor = selectedColor;
     }
 
-    // Set up player info
-    playerColor = finalPlayerColor;
-    const computerColor = finalPlayerColor === 'white' ? 'black' : 'white';
+    // Setup event listeners
+    function setupEventListeners() {
+        // Register player name
+        registerBtn.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
+            if (name) {
+                socket.emit('registerPlayer', name);
+            } else {
+                alert('Please enter your name.');
+            }
+        });
 
-    // Update UI
-    if (finalPlayerColor === 'white') {
-      whitePlayerElement.textContent = `${playerName} (You)`;
-      blackPlayerElement.textContent = 'Stockfish';
-    } else {
-      whitePlayerElement.textContent = 'Stockfish';
-      blackPlayerElement.textContent = `${playerName} (You)`;
+        // Color selection
+        colorOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                // Skip if this color is already taken by another player
+                if (option.classList.contains('taken')) {
+                    return;
+                }
 
-      // Flip time controls for black player
-      const timeControlsContainer = document.getElementById('time-controls-container');
-      timeControlsContainer.classList.add('flipped');
+                const color = option.dataset.color;
+                socket.emit('selectColor', {
+                    serverId: playerInfo.currentServer,
+                    color: color
+                });
+            });
+        });
+
+        // Back to lobby button
+        backToLobbyBtn.addEventListener('click', () => {
+            showScreen(serverLobbyScreen);
+        });
+
+        // Back to server button (from game)
+        backToServerBtn.addEventListener('click', () => {
+            showScreen(serverLobbyScreen);
+        });
+
+        // Start game button
+        startGameBtn.addEventListener('click', () => {
+            if (playerInfo.currentServer) {
+                socket.emit('startGame', playerInfo.currentServer);
+            }
+        });
     }
 
-    gameStatus.textContent = 'Playing against Stockfish';
+    // Create the chessboard UI
+    function createChessboard() {
+        chessboard.innerHTML = '';
 
-    // Initialize chess game
-    chessGame = new ChessGame(finalPlayerColor);
+        // Create 64 squares
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const square = document.createElement('div');
+                const squareColor = (row + col) % 2 === 0 ? 'white' : 'black';
+                square.className = `square ${squareColor}`;
 
-    // Set up Stockfish
-    if (chessGame.stockfish) {
-      chessGame.stockfish.setSkillLevel(parseInt(selectedDifficulty));
-    }
+                // Set data attributes for position
+                const file = 'abcdefgh'[col];
+                const rank = 8 - row;
+                square.dataset.square = file + rank;
 
-    // Override the onMove callback to handle Stockfish moves
-    chessGame.onMove = (moveData) => {
-      // Update the last move time for timer tracking
-      if (whiteTimeRemaining > 0 || blackTimeRemaining > 0) {
-        lastMoveTime = new Date();
-      }
+                // Add click event
+                square.addEventListener('click', handleSquareClick);
 
-      // After player moves, get Stockfish's response
-      if (chessGame.currentTurn !== playerColor) {
-        setTimeout(() => {
-          chessGame.playAgainstEngine();
-        }, 500); // Small delay to make it feel more natural
-      }
-    };
-
-    // Handle time control
-    if (selectedTimeControl !== 'unlimited') {
-      const [minutes, increment] = selectedTimeControl.split('+').map(num => parseInt(num));
-
-      // Set up time control
-      whiteTimeRemaining = minutes * 60;
-      blackTimeRemaining = minutes * 60;
-      lastMoveTime = new Date();
-
-      // Show time controls
-      const timeControlsContainer = document.getElementById('time-controls-container');
-      timeControlsContainer.style.display = 'flex';
-
-      updateTimeDisplay();
-      startTimer();
-    } else {
-      // Hide time controls for unlimited games
-      const timeControlsContainer = document.getElementById('time-controls-container');
-      timeControlsContainer.style.display = 'none';
-    }
-
-    // Show resign button
-    resignButton.classList.remove('hidden');
-
-    // If computer plays white, make the first move
-    if (finalPlayerColor === 'black') {
-      setTimeout(() => {
-        chessGame.playAgainstEngine();
-      }, 1000);
-    }
-
-    // Transition to game section
-    showSection(gameSection);
-  }
-
-  // Helper function to get selected time control
-  function getSelectedTimeControl() {
-    const selectedRadio = document.querySelector('input[name="timeControl"]:checked');
-
-    if (selectedRadio.value === 'custom') {
-      return {
-        minutes: parseInt(customMinutes.value) || 10,
-        increment: parseInt(customIncrement.value) || 5
-      };
-    } else {
-      // Parse preset time controls (e.g., "3+2" -> {minutes: 3, increment: 2})
-      const [minutes, increment] = selectedRadio.value.split('+').map(num => parseInt(num));
-      return { minutes, increment };
-    }
-  }
-
-  // Helper functions
-  function renderServerList(servers) {
-    serverList.innerHTML = '';
-
-    servers.forEach(server => {
-      const serverCard = document.createElement('div');
-      serverCard.classList.add('server-card');
-      serverCard.dataset.serverId = server.id;
-
-      const whiteCount = server.whitePlayer ? 1 : 0;
-      const blackCount = server.blackPlayer ? 1 : 0;
-      const totalPlayers = whiteCount + blackCount;
-
-      let statusText = 'Empty';
-      if (server.gameStarted) {
-        statusText = 'Game in progress';
-      } else if (totalPlayers === 1) {
-        statusText = 'Waiting for opponent';
-      } else if (totalPlayers === 2) {
-        statusText = 'Ready to start';
-      }
-
-      serverCard.innerHTML = `
-        <h3>${server.name}</h3>
-        <div class="server-info">
-          <p class="players-count">${totalPlayers}/2 players</p>
-          <p>${statusText}</p>
-        </div>
-        <button ${server.gameStarted ? 'disabled' : ''}>Join Server</button>
-      `;
-
-      const joinButton = serverCard.querySelector('button');
-      joinButton.addEventListener('click', () => {
-        currentServerId = server.id;
-        socket.emit('joinServer', server.id, playerName);
-      });
-
-      serverList.appendChild(serverCard);
-    });
-  }
-
-  function updateLobbyDisplay(server) {
-    // Reset all slots
-    joinWhiteButton.classList.remove('hidden');
-    joinBlackButton.classList.remove('hidden');
-    whitePlayerInfo.classList.add('hidden');
-    blackPlayerInfo.classList.add('hidden');
-    startGameButton.classList.add('hidden');
-    timeControlSection.classList.add('hidden');
-
-    // Update white slot
-    if (server.whitePlayer) {
-      joinWhiteButton.classList.add('hidden');
-      whitePlayerInfo.classList.remove('hidden');
-      whitePlayerInfo.querySelector('.player-name').textContent = server.whitePlayer.name;
-
-      if (server.whitePlayer.id === socket.id) {
-        whitePlayerInfo.querySelector('.player-status').textContent = '(You)';
-        isWhitePlayer = true;
-        playerColor = 'white';
-      } else {
-        whitePlayerInfo.querySelector('.player-status').textContent = '';
-      }
-    }
-
-    // Update black slot
-    if (server.blackPlayer) {
-      joinBlackButton.classList.add('hidden');
-      blackPlayerInfo.classList.remove('hidden');
-      blackPlayerInfo.querySelector('.player-name').textContent = server.blackPlayer.name;
-
-      if (server.blackPlayer.id === socket.id) {
-        blackPlayerInfo.querySelector('.player-status').textContent = '(You)';
-        isWhitePlayer = false;
-        playerColor = 'black';
-      } else {
-        blackPlayerInfo.querySelector('.player-status').textContent = '';
-      }
-    }
-
-    // Show time control section and start button if both players are present and current user is white
-    if (server.whitePlayer && server.blackPlayer && isWhitePlayer) {
-      timeControlSection.classList.remove('hidden');
-      startGameButton.classList.remove('hidden');
-      startGameButton.disabled = false;
-      lobbyStatus.textContent = 'Select time control and click "Start Game" to begin.';
-    } else if (server.whitePlayer && server.blackPlayer) {
-      lobbyStatus.textContent = 'Waiting for white player to start the game...';
-    } else {
-      lobbyStatus.textContent = 'Waiting for players to join...';
-    }
-  }
-
-  function renderOnlineUsers(users) {
-    // Clear all lists first
-    onlineUsersList.innerHTML = '';
-    serverOnlineUsersList.innerHTML = '';
-    lobbyOnlineUsersList.innerHTML = '';
-
-    // Filter out current user and create user items
-    const otherUsers = users.filter(user => user.id !== socket.id);
-
-    if (otherUsers.length === 0) {
-      onlineUsersList.innerHTML = '<p class="no-users">No other users online</p>';
-      serverOnlineUsersList.innerHTML = '<p class="no-users">No other users online</p>';
-      lobbyOnlineUsersList.innerHTML = '<p class="no-users">No other users online</p>';
-      return;
-    }
-
-    // Populate all three lists with all users (since they're all on the same platform)
-    otherUsers.forEach(user => {
-      const userItem = document.createElement('div');
-      userItem.classList.add('user-item');
-
-      if (user.status === 'in-game') {
-        userItem.classList.add('in-game');
-      }
-
-      userItem.innerHTML = `
-        <span class="user-name">${user.name}</span>
-        <span class="user-status ${user.status}">${user.status === 'in-game' ? 'In Game' : 'Online'}</span>
-      `;
-
-      // Add to all lists
-      onlineUsersList.appendChild(userItem.cloneNode(true));
-      serverOnlineUsersList.appendChild(userItem.cloneNode(true));
-      lobbyOnlineUsersList.appendChild(userItem.cloneNode(true));
-    });
-  }
-
-  function showSection(section) {
-    // Hide all sections
-    loginSection.classList.add('hidden');
-    gameSelectionSection.classList.add('hidden');
-    stockfishLobbySection.classList.add('hidden');
-    serverSection.classList.add('hidden');
-    lobbySection.classList.add('hidden');
-    gameSection.classList.add('hidden');
-
-    // Show the specified section
-    section.classList.remove('hidden');
-  }
-
-  // Time control functions
-  function startTimer() {
-    if (timeInterval) {
-      clearInterval(timeInterval);
-    }
-
-    timeInterval = setInterval(() => {
-      // For Stockfish games, check if we have time remaining values set
-      // For multiplayer games, check if gameTimeControl exists
-      if (!chessGame || (!gameTimeControl && whiteTimeRemaining === 0 && blackTimeRemaining === 0)) return;
-
-      const now = new Date();
-      const timeSinceLastMove = Math.floor((now - lastMoveTime) / 1000);
-
-      // Deduct time from the current player's clock
-      if (chessGame.currentTurn === 'white') {
-        whiteTimeRemaining = Math.max(0, whiteTimeRemaining - timeSinceLastMove);
-        if (whiteTimeRemaining <= 0) {
-          handleTimeout('white');
-          return;
+                chessboard.appendChild(square);
+            }
         }
-      } else {
-        blackTimeRemaining = Math.max(0, blackTimeRemaining - timeSinceLastMove);
-        if (blackTimeRemaining <= 0) {
-          handleTimeout('black');
-          return;
+
+        // Update the board with pieces
+        updateBoard();
+    }
+
+    // Update the board based on current chess position
+    function updateBoard() {
+        // Remove all pieces
+        const pieces = document.querySelectorAll('.chess-piece');
+        pieces.forEach(piece => piece.remove());
+
+        // Reset selection
+        const selectedSquares = document.querySelectorAll('.square.selected');
+        selectedSquares.forEach(square => square.classList.remove('selected'));
+
+        const validMoveSquares = document.querySelectorAll('.square.valid-move');
+        validMoveSquares.forEach(square => square.classList.remove('valid-move'));
+
+        gameState.selectedPiece = null;
+        gameState.validMoves = [];
+
+        // Add pieces based on current position
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const file = 'abcdefgh'[col];
+                const rank = 8 - row;
+                const square = file + rank;
+
+                const piece = chess.get(square);
+                if (piece) {
+                    const squareElement = document.querySelector(`.square[data-square="${square}"]`);
+                    const pieceElement = document.createElement('div');
+                    pieceElement.className = 'chess-piece';
+
+                    // Set piece image
+                    const pieceColor = piece.color === chess.COLORS.WHITE ? 'white' : 'black';
+                    let pieceType = '';
+
+                    switch(piece.type) {
+                        case chess.PIECES.PAWN: pieceType = 'pawn'; break;
+                        case chess.PIECES.KNIGHT: pieceType = 'knight'; break;
+                        case chess.PIECES.BISHOP: pieceType = 'bishop'; break;
+                        case chess.PIECES.ROOK: pieceType = 'rook'; break;
+                        case chess.PIECES.QUEEN: pieceType = 'queen'; break;
+                        case chess.PIECES.KING: pieceType = 'king'; break;
+                    }
+
+                    pieceElement.style.backgroundImage = `url('pieces/${pieceColor}-${pieceType}.png')`;
+                    squareElement.appendChild(pieceElement);
+                }
+            }
         }
-      }
 
-      lastMoveTime = now;
-      updateTimeDisplay();
-    }, 1000);
-  }
-
-  function stopTimer() {
-    if (timeInterval) {
-      clearInterval(timeInterval);
-      timeInterval = null;
-    }
-  }
-
-  function updateTimeDisplay() {
-    if (!whiteTimeDisplay || !blackTimeDisplay) return;
-
-    const whiteTime = formatTime(whiteTimeRemaining);
-    const blackTime = formatTime(blackTimeRemaining);
-
-    whiteTimeDisplay.textContent = whiteTime;
-    blackTimeDisplay.textContent = blackTime;
-
-    // Update visual states
-    updateTimeControlStyles();
-  }
-
-  function updateTimeControlStyles() {
-    if (!chessGame) return;
-
-    // Remove all active and low-time classes
-    whiteTimeControl.classList.remove('active', 'low-time');
-    blackTimeControl.classList.remove('active', 'low-time');
-
-    // Add active class to current player
-    if (chessGame.currentTurn === 'white') {
-      whiteTimeControl.classList.add('active');
-    } else {
-      blackTimeControl.classList.add('active');
+        // Flip board for black player
+        if (playerInfo.color === 'black') {
+            chessboard.style.transform = 'rotate(180deg)';
+            const allPieces = document.querySelectorAll('.chess-piece');
+            allPieces.forEach(piece => {
+                piece.style.transform = 'rotate(180deg)';
+            });
+        }
     }
 
-    // Add low-time class if time is running low (under 30 seconds)
-    if (whiteTimeRemaining <= 30) {
-      whiteTimeControl.classList.add('low-time');
+    // Handle square click
+    function handleSquareClick(event) {
+        // Only allow moves if game is active and it's player's turn
+        if (gameState.status !== 'active' || gameState.turn !== playerInfo.color) {
+            return;
+        }
+
+        const square = event.target.closest('.square');
+        if (!square) return;
+
+        const squareName = square.dataset.square;
+
+        // If no piece is selected, try to select one
+        if (!gameState.selectedPiece) {
+            const piece = chess.get(squareName);
+
+            // Can only select own pieces
+            if (piece && ((piece.color === chess.COLORS.WHITE && playerInfo.color === 'white') ||
+                         (piece.color === chess.COLORS.BLACK && playerInfo.color === 'black'))) {
+
+                gameState.selectedPiece = squareName;
+                square.classList.add('selected');
+
+                // Find valid moves
+                const moves = chess.generateMoves({ legal: true });
+                gameState.validMoves = moves.filter(move => move.from === squareName);
+
+                // Highlight valid moves
+                gameState.validMoves.forEach(move => {
+                    const targetSquare = document.querySelector(`.square[data-square="${move.to}"]`);
+                    if (targetSquare) {
+                        targetSquare.classList.add('valid-move');
+                    }
+                });
+            }
+        }
+        // If a piece is already selected
+        else {
+            // Check if clicked on same square (deselect)
+            if (squareName === gameState.selectedPiece) {
+                // Deselect
+                square.classList.remove('selected');
+                gameState.selectedPiece = null;
+
+                // Remove highlights
+                const validMoveSquares = document.querySelectorAll('.square.valid-move');
+                validMoveSquares.forEach(s => s.classList.remove('valid-move'));
+                gameState.validMoves = [];
+
+            }
+            // Check if clicked on valid move square
+            else {
+                const move = gameState.validMoves.find(move => move.to === squareName);
+
+                if (move) {
+                    // Make the move
+                    socket.emit('makeMove', {
+                        gameId: gameState.id,
+                        move: move
+                    });
+
+                    // Clear selection
+                    const selectedSquare = document.querySelector('.square.selected');
+                    if (selectedSquare) selectedSquare.classList.remove('selected');
+
+                    const validMoveSquares = document.querySelectorAll('.square.valid-move');
+                    validMoveSquares.forEach(s => s.classList.remove('valid-move'));
+
+                    gameState.selectedPiece = null;
+                    gameState.validMoves = [];
+                } else {
+                    // Clicked on invalid square, try selecting a different piece
+                    const piece = chess.get(squareName);
+
+                    // Deselect current piece
+                    const selectedSquare = document.querySelector('.square.selected');
+                    if (selectedSquare) selectedSquare.classList.remove('selected');
+
+                    const validMoveSquares = document.querySelectorAll('.square.valid-move');
+                    validMoveSquares.forEach(s => s.classList.remove('valid-move'));
+
+                    gameState.selectedPiece = null;
+                    gameState.validMoves = [];
+
+                    // Select new piece if it's player's piece
+                    if (piece && ((piece.color === chess.COLORS.WHITE && playerInfo.color === 'white') ||
+                                 (piece.color === chess.COLORS.BLACK && playerInfo.color === 'black'))) {
+
+                        gameState.selectedPiece = squareName;
+                        square.classList.add('selected');
+
+                        // Find valid moves
+                        const moves = chess.generateMoves({ legal: true });
+                        gameState.validMoves = moves.filter(move => move.from === squareName);
+
+                        // Highlight valid moves
+                        gameState.validMoves.forEach(move => {
+                            const targetSquare = document.querySelector(`.square[data-square="${move.to}"]`);
+                            if (targetSquare) {
+                                targetSquare.classList.add('valid-move');
+                            }
+                        });
+                    }
+                }
+            }
+        }
     }
-    if (blackTimeRemaining <= 30) {
-      blackTimeControl.classList.add('low-time');
+
+    // Update game status display
+    function updateGameStatus() {
+        if (gameState.status === 'waiting') {
+            if (playerInfo.color === 'white') {
+                gameStatus.textContent = "Press 'Start Game' to begin";
+            } else {
+                gameStatus.textContent = "Waiting for white to start the game...";
+            }
+        } else if (gameState.status === 'active') {
+            if (gameState.turn === playerInfo.color) {
+                gameStatus.textContent = "Your turn";
+            } else {
+                gameStatus.textContent = `${gameState.opponent.name}'s turn`;
+            }
+
+            // Check for check
+            if (chess.isKingAttacked(gameState.turn === 'white' ? chess.COLORS.WHITE : chess.COLORS.BLACK)) {
+                gameStatus.textContent += " (CHECK)";
+            }
+        } else if (gameState.status === 'finished') {
+            if (gameState.winner) {
+                gameStatus.textContent = `Game over - ${gameState.winner === playerInfo.color ? 'You win!' : 'You lose!'}`;
+            } else {
+                gameStatus.textContent = "Game over - Draw";
+            }
+        }
     }
-  }
 
-  function formatTime(seconds) {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
+    // Check for game end conditions
+    function checkGameEnd() {
+        const gameOver = chess.isGameOver();
 
-  function handleTimeout(color) {
-    stopTimer();
+        if (gameOver) {
+            gameState.status = 'finished';
 
-    const winner = color === 'white' ? 'black' : 'white';
-    gameStatus.textContent = `Time's up! ${winner.charAt(0).toUpperCase() + winner.slice(1)} wins by timeout!`;
+            if (gameOver === 'checkmate') {
+                // The player who just moved wins
+                gameState.winner = gameState.turn === 'white' ? 'black' : 'white';
+                alert(gameState.winner === playerInfo.color ? 'Checkmate! You win!' : 'Checkmate! You lose!');
+            } else {
+                // Draw
+                gameState.winner = null;
+                alert(`Game drawn by ${gameOver}`);
+            }
 
-    // Disable the chessboard
-    const chessboard = document.getElementById('chessboard');
-    chessboard.style.pointerEvents = 'none';
-    chessboard.style.opacity = '0.7';
-
-    // Notify the server about the timeout
-    socket.emit('timeOut', currentServerId, currentGameId, color);
-  }
-
-  // Clear timer when leaving game
-  const originalLeaveGame = leaveGameButton.onclick;
-  leaveGameButton.addEventListener('click', () => {
-    stopTimer();
-    // Reset time control state
-    gameTimeControl = null;
-    whiteTimeRemaining = 0;
-    blackTimeRemaining = 0;
-    lastMoveTime = null;
-  });
-
-  // Chat event handlers
-  sendChatButton.addEventListener('click', sendChatMessage);
-  chatInput.addEventListener('keypress', (event) => {
-    if (event.key === 'Enter') {
-      sendChatMessage();
+            updateGameStatus();
+        }
     }
-  });
 
-  // Add toggle chat functionality
-  toggleChatButton.addEventListener('click', () => {
-    chatContainer.classList.toggle('minimized');
-    // Update the button text
-    toggleChatButton.textContent = chatContainer.classList.contains('minimized') ? '+' : '−';
-  });
+    // Helper to show a specific screen
+    function showScreen(screen) {
+        // Hide all screens
+        loginScreen.classList.add('hidden');
+        serverLobbyScreen.classList.add('hidden');
+        colorSelectionScreen.classList.add('hidden');
+        waitingScreen.classList.add('hidden');
+        gameScreen.classList.add('hidden');
 
-  function sendChatMessage() {
-    const message = chatInput.value.trim();
-    if (message && playerName) {
-      socket.emit('chatMessage', { sender: playerName, text: message });
-      chatInput.value = '';
+        // Show the requested screen
+        screen.classList.remove('hidden');
     }
-  }
 
-  socket.on('chatMessage', (message) => {
-    displayChatMessage(message);
-  });
-
-  function displayChatMessage(message) {
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('chat-message');
-    messageElement.innerHTML = `<span class="chat-sender">${message.sender}:</span> <span class="chat-text">${message.text}</span>`;
-    chatMessages.appendChild(messageElement);
-    chatMessages.scrollTop = chatMessages.scrollHeight; // Scroll to the bottom
-  }
-});
+    // Start the app when DOM is ready
+    document.addEventListener('DOMContentLoaded', init);
+})();
