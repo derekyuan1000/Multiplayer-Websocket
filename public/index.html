@@ -45,9 +45,54 @@
                 </div>
             </div>
             <div class="game-controls">
-                <button id="start-game-btn" class="hidden">Start Game</button>
+                <button id="select-time-btn" class="hidden">Select Time Control</button>
             </div>
             <button id="back-to-lobby-btn">Back to Lobby</button>
+        </div>
+
+        <div id="time-control-screen" class="screen hidden">
+            <h1>Select Time Control</h1>
+            <div class="server-info">
+                <h3 id="time-server-title">Server 1</h3>
+                <p>Choose your preferred time control</p>
+            </div>
+
+            <div class="time-control-options">
+                <div class="time-control-preset" data-minutes="5" data-increment="3">
+                    <h3>Blitz</h3>
+                    <p>5 minutes + 3 seconds</p>
+                </div>
+                <div class="time-control-preset" data-minutes="10" data-increment="5">
+                    <h3>Rapid</h3>
+                    <p>10 minutes + 5 seconds</p>
+                </div>
+                <div class="time-control-preset" data-minutes="30" data-increment="0">
+                    <h3>Classical</h3>
+                    <p>30 minutes + 0 seconds</p>
+                </div>
+                <div class="time-control-custom">
+                    <h3>Custom</h3>
+                    <div class="custom-inputs">
+                        <div class="input-group">
+                            <label for="custom-minutes">Minutes:</label>
+                            <input type="number" id="custom-minutes" min="1" max="180" value="15">
+                        </div>
+                        <div class="input-group">
+                            <label for="custom-increment">Increment (seconds):</label>
+                            <input type="number" id="custom-increment" min="0" max="60" value="10">
+                        </div>
+                    </div>
+                    <button id="select-custom-btn">Select Custom</button>
+                </div>
+            </div>
+
+            <div class="selected-time-display hidden" id="selected-time-display">
+                <h3>Selected Time Control:</h3>
+                <p id="selected-time-text"></p>
+                <button id="start-timed-game-btn">Start Game</button>
+            </div>
+
+            <button id="back-to-colors-btn">Back to Color Selection</button>
         </div>
 
         <div id="waiting-screen" class="screen hidden">
@@ -61,6 +106,9 @@
                 <div class="player-info" id="opponent-info">
                     <span class="player-name">Opponent: <span id="opponent-name"></span></span>
                     <span class="player-color" id="opponent-color"></span>
+                    <div class="chess-clock" id="opponent-clock">
+                        <span class="clock-time">--:--</span>
+                    </div>
                 </div>
 
                 <div id="game-status">White's turn</div>
@@ -68,6 +116,9 @@
                 <div class="player-info" id="player-info">
                     <span class="player-name">You: <span id="your-name"></span></span>
                     <span class="player-color" id="your-color"></span>
+                    <div class="chess-clock" id="player-clock">
+                        <span class="clock-time">--:--</span>
+                    </div>
                 </div>
             </div>
 

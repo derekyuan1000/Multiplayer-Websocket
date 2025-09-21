@@ -18,25 +18,39 @@
         status: 'waiting', // waiting, active, finished
         turn: 'white',
         selectedPiece: null,
-        validMoves: []
+        validMoves: [],
+        clocks: null,
+        clockInterval: null
     };
     let chess = new Chess();
     let serverLobbies = {};
+    let selectedTimeControl = null;
 
     // DOM elements
     const loginScreen = document.getElementById('login-screen');
     const serverLobbyScreen = document.getElementById('server-lobby-screen');
     const colorSelectionScreen = document.getElementById('color-selection-screen');
+    const timeControlScreen = document.getElementById('time-control-screen');
     const waitingScreen = document.getElementById('waiting-screen');
     const gameScreen = document.getElementById('game-screen');
     const playerNameInput = document.getElementById('player-name');
     const registerBtn = document.getElementById('register-btn');
     const serversGrid = document.getElementById('servers-grid');
     const selectedServerTitle = document.getElementById('selected-server-title');
+    const timeServerTitle = document.getElementById('time-server-title');
     const serverStatus = document.getElementById('server-status');
     const colorOptions = document.querySelectorAll('.color-option');
+    const selectTimeBtn = document.getElementById('select-time-btn');
     const backToLobbyBtn = document.getElementById('back-to-lobby-btn');
+    const backToColorsBtn = document.getElementById('back-to-colors-btn');
     const backToServerBtn = document.getElementById('back-to-server-btn');
+    const timeControlPresets = document.querySelectorAll('.time-control-preset');
+    const selectCustomBtn = document.getElementById('select-custom-btn');
+    const customMinutes = document.getElementById('custom-minutes');
+    const customIncrement = document.getElementById('custom-increment');
+    const selectedTimeDisplay = document.getElementById('selected-time-display');
+    const selectedTimeText = document.getElementById('selected-time-text');
+    const startTimedGameBtn = document.getElementById('start-timed-game-btn');
     const waitingMessage = document.getElementById('waiting-message');
     const opponentName = document.getElementById('opponent-name');
     const opponentColor = document.getElementById('opponent-color');
@@ -45,6 +59,8 @@
     const gameStatus = document.getElementById('game-status');
     const chessboard = document.getElementById('chessboard');
     const startGameBtn = document.getElementById('start-game-btn');
+    const playerClock = document.getElementById('player-clock');
+    const opponentClock = document.getElementById('opponent-clock');
 
     // Initialize the game
     function init() {
@@ -55,8 +71,8 @@
 
     // Connect to WebSocket server
     function connectToServer() {
-        // Connect to dedicated game server on port 3002
-        socket = io('http://localhost:3002');
+        // Connect to the same server (no separate port needed on Render)
+        socket = io();
 
         // Socket event handlers
         socket.on('connect', () => {
@@ -85,11 +101,30 @@
             showScreen(colorSelectionScreen);
         });
 
+        // Handle time control selection event from server
+        socket.on('timeControlSelected', ({ serverId, server, timeControl }) => {
+            selectedTimeControl = timeControl;
+            timeServerTitle.textContent = `Server ${serverId}`;
+
+            // Show the selected time control
+            selectedTimeDisplay.classList.remove('hidden');
+            selectedTimeText.textContent = `${timeControl.minutes} minutes + ${timeControl.increment} seconds`;
+
+            // Show time control screen
+            showScreen(timeControlScreen);
+        });
+
         socket.on('gameStarted', (data) => {
             gameState.id = data.gameId;
             gameState.serverId = data.serverId;
             gameState.status = 'active';
             gameState.turn = data.turn;
+
+            // Initialize clocks if time control is present
+            if (data.clocks) {
+                gameState.clocks = data.clocks;
+                startChessClocks();
+            }
 
             // Determine player colors and opponent info
             if (data.white.id === socket.id) {
@@ -114,6 +149,8 @@
             yourName.textContent = playerInfo.name;
             yourColor.textContent = `(${playerInfo.color})`;
 
+            // Update clocks
+            updateClockDisplay();
             updateGameStatus();
             showScreen(gameScreen);
         });
@@ -121,6 +158,12 @@
         socket.on('moveMade', (data) => {
             // Update game state
             gameState.turn = data.turn;
+
+            // Update clocks if present
+            if (data.clocks) {
+                gameState.clocks = data.clocks;
+                updateClockDisplay();
+            }
 
             // Make the move on the board
             const move = data.move;
@@ -259,6 +302,87 @@
         serverStatus.textContent = statusText;
     }
 
+    // Chess clock functions
+    function startChessClocks() {
+        if (gameState.clockInterval) {
+            clearInterval(gameState.clockInterval);
+        }
+
+        gameState.clockInterval = setInterval(() => {
+            if (gameState.status === 'active' && gameState.clocks) {
+                // Decrease time for current player
+                const currentPlayerColor = gameState.turn;
+                gameState.clocks[currentPlayerColor] -= 1000; // Decrease by 1 second
+
+                // Check for time forfeit
+                if (gameState.clocks[currentPlayerColor] <= 0) {
+                    gameState.clocks[currentPlayerColor] = 0;
+                    gameState.status = 'finished';
+                    const winner = currentPlayerColor === 'white' ? 'black' : 'white';
+                    alert(`${currentPlayerColor === playerInfo.color ? 'You' : gameState.opponent.name} ran out of time! ${winner === playerInfo.color ? 'You win!' : 'You lose!'}`);
+                    clearInterval(gameState.clockInterval);
+                    return;
+                }
+
+                updateClockDisplay();
+            }
+        }, 1000);
+    }
+
+    function stopChessClocks() {
+        if (gameState.clockInterval) {
+            clearInterval(gameState.clockInterval);
+            gameState.clockInterval = null;
+        }
+    }
+
+    function updateClockDisplay() {
+        if (!gameState.clocks) {
+            // Hide clocks if no time control
+            playerClock.style.display = 'none';
+            opponentClock.style.display = 'none';
+            return;
+        }
+
+        // Show clocks
+        playerClock.style.display = 'block';
+        opponentClock.style.display = 'block';
+
+        // Update clock times
+        const playerTime = gameState.clocks[playerInfo.color] || 0;
+        const opponentTime = gameState.clocks[gameState.opponent.color] || 0;
+
+        // Format time as MM:SS
+        const formatTime = (ms) => {
+            const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        };
+
+        // Update clock displays
+        playerClock.querySelector('.clock-time').textContent = formatTime(playerTime);
+        opponentClock.querySelector('.clock-time').textContent = formatTime(opponentTime);
+
+        // Add active class to current player's clock
+        playerClock.classList.remove('active', 'low-time');
+        opponentClock.classList.remove('active', 'low-time');
+
+        if (gameState.turn === playerInfo.color) {
+            playerClock.classList.add('active');
+        } else {
+            opponentClock.classList.add('active');
+        }
+
+        // Add low-time warning (under 30 seconds)
+        if (playerTime < 30000) {
+            playerClock.classList.add('low-time');
+        }
+        if (opponentTime < 30000) {
+            opponentClock.classList.add('low-time');
+        }
+    }
+
     // Update UI based on color selections in current server
     function updateColorSelections(server) {
         colorOptions.forEach(option => {
@@ -285,12 +409,15 @@
             }
         });
 
-        // Show/hide start button - only show for white player when both colors are selected
+        // Show/hide buttons based on player role and server state
         if (server.white && server.white.id === playerInfo.id && server.black) {
+            // White player with both colors selected
             startGameBtn.classList.remove('hidden');
-            console.log('Showing start button for white player');
+            selectTimeBtn.classList.remove('hidden');
+            console.log('Showing start and time control buttons for white player');
         } else {
             startGameBtn.classList.add('hidden');
+            selectTimeBtn.classList.add('hidden');
             if (server.white && server.black) {
                 console.log('Both players connected, but current player is not white');
             } else {
@@ -339,6 +466,11 @@
             showScreen(serverLobbyScreen);
         });
 
+        // Back to colors button (from time control)
+        backToColorsBtn.addEventListener('click', () => {
+            showScreen(colorSelectionScreen);
+        });
+
         // Back to server button (from game)
         backToServerBtn.addEventListener('click', () => {
             // If player is in an active game, emit leave to lobby event (which will resign them)
@@ -351,7 +483,69 @@
             showScreen(serverLobbyScreen);
         });
 
-        // Start game button
+        // Select time control preset
+        timeControlPresets.forEach(preset => {
+            preset.addEventListener('click', () => {
+                // Remove selected class from all presets
+                timeControlPresets.forEach(p => p.classList.remove('selected'));
+
+                // Add selected class to clicked preset
+                preset.classList.add('selected');
+
+                // Get preset values
+                const minutes = parseInt(preset.dataset.minutes);
+                const increment = parseInt(preset.dataset.increment);
+
+                // Create time control object
+                const timeControl = {
+                    name: preset.querySelector('h3').textContent,
+                    minutes: minutes,
+                    increment: increment
+                };
+
+                // Emit time control selection to server
+                socket.emit('selectTimeControl', {
+                    serverId: playerInfo.currentServer,
+                    timeControl: timeControl
+                });
+            });
+        });
+
+        // Select custom time control
+        selectCustomBtn.addEventListener('click', () => {
+            const minutes = parseInt(customMinutes.value);
+            const increment = parseInt(customIncrement.value);
+
+            if (minutes > 0 && increment >= 0) {
+                const timeControl = {
+                    name: 'Custom',
+                    minutes: minutes,
+                    increment: increment
+                };
+
+                // Emit custom time control selection
+                socket.emit('selectTimeControl', {
+                    serverId: playerInfo.currentServer,
+                    timeControl: timeControl
+                });
+            } else {
+                alert('Please enter valid time controls (minutes > 0, increment >= 0).');
+            }
+        });
+
+        // Select time control button
+        selectTimeBtn.addEventListener('click', () => {
+            showScreen(timeControlScreen);
+        });
+
+        // Start timed game button
+        startTimedGameBtn.addEventListener('click', () => {
+            if (playerInfo.currentServer && selectedTimeControl) {
+                socket.emit('startGameWithTime', playerInfo.currentServer);
+            }
+        });
+
+        // Start game button (regular game without time control)
         startGameBtn.addEventListener('click', () => {
             if (playerInfo.currentServer) {
                 socket.emit('startGame', playerInfo.currentServer);
@@ -490,7 +684,7 @@
 
                 // Remove highlights
                 const validMoveSquares = document.querySelectorAll('.square.valid-move');
-                validMoveSquares.forEach(s => s.classList.remove('valid-move'));
+                validMoveSquares.forEach(square => square.classList.remove('valid-move'));
                 gameState.validMoves = [];
 
             }
@@ -607,11 +801,18 @@
         loginScreen.classList.add('hidden');
         serverLobbyScreen.classList.add('hidden');
         colorSelectionScreen.classList.add('hidden');
+        timeControlScreen.classList.add('hidden');
         waitingScreen.classList.add('hidden');
         gameScreen.classList.add('hidden');
 
         // Show the requested screen
         screen.classList.remove('hidden');
+    }
+
+    // Update the selected time display
+    function updateSelectedTimeDisplay(minutes, increment) {
+        selectedTimeDisplay.textContent = `${minutes}m ${increment}s`;
+        selectedTimeText.textContent = `(${minutes} minutes + ${increment} seconds)`;
     }
 
     // Start the app when DOM is ready

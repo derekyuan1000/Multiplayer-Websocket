@@ -4,20 +4,20 @@ const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
 
-// Create Express app for web server
+// Create Express app
 const app = express();
-const webServer = http.createServer(app);
 
 // Middleware
 app.use(cors());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Create a dedicated server for WebSocket
-const gameServer = http.createServer();
-const io = new Server(gameServer, {
+// Create single HTTP server for both web and WebSocket
+const server = http.createServer(app);
+const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: false
   }
 });
 
@@ -32,9 +32,10 @@ for (let i = 1; i <= 6; i++) {
     id: i,
     white: null,
     black: null,
-    status: 'available', // available, waiting, in-game
+    status: 'available', // available, waiting, in-game, time-control
     gameId: null,
-    players: []
+    players: [],
+    timeControl: null // Will store selected time control
   };
 }
 
@@ -145,6 +146,49 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Player selects time control (only white player can do this)
+  socket.on('selectTimeControl', ({ serverId, timeControl }) => {
+    if (!socket.playerName || !socket.currentServer) {
+      socket.emit('error', { message: 'Please select a server first' });
+      return;
+    }
+
+    const server = serverLobbies[serverId];
+    if (!server || socket.currentServer !== serverId) {
+      socket.emit('error', { message: 'Invalid server or not in this server' });
+      return;
+    }
+
+    // Only white player can select time control
+    if (!server.white || server.white.id !== socket.id) {
+      socket.emit('error', { message: 'Only white player can select time control' });
+      return;
+    }
+
+    // Must have both players
+    if (!server.black) {
+      socket.emit('error', { message: 'Need both players before selecting time control' });
+      return;
+    }
+
+    console.log(`Player ${socket.playerName} selected time control in server ${serverId}:`, timeControl);
+
+    // Set time control
+    server.timeControl = timeControl;
+    server.status = 'time-control';
+
+    // Broadcast updated server status
+    io.emit('serverLobbies', serverLobbies);
+
+    // Send time control details to both players in this server
+    server.players.forEach(player => {
+      const playerSocket = io.sockets.sockets.get(player.id);
+      if (playerSocket) {
+        playerSocket.emit('timeControlSelected', { serverId, server, timeControl });
+      }
+    });
+  });
+
   // Start game in a server (white player starts)
   socket.on('startGame', (serverId) => {
     const server = serverLobbies[serverId];
@@ -202,6 +246,80 @@ io.on('connection', (socket) => {
     console.log(`Game started in server ${serverId}: ${server.white.name} vs ${server.black.name}`);
   });
 
+  // Start game with time control
+  socket.on('startGameWithTime', (serverId) => {
+    const server = serverLobbies[serverId];
+
+    if (!server) {
+      socket.emit('error', { message: 'Server not found' });
+      return;
+    }
+
+    if (!server.white || server.white.id !== socket.id) {
+      socket.emit('error', { message: 'Only white player can start the game' });
+      return;
+    }
+
+    if (!server.black) {
+      socket.emit('error', { message: 'Waiting for black player' });
+      return;
+    }
+
+    if (!server.timeControl) {
+      socket.emit('error', { message: 'Please select time control first' });
+      return;
+    }
+
+    // Create game with time control
+    const gameId = `game_${serverId}_${Date.now()}`;
+    const timeControlMs = server.timeControl.minutes * 60 * 1000; // Convert to milliseconds
+    const incrementMs = server.timeControl.increment * 1000; // Convert to milliseconds
+
+    games[gameId] = {
+      id: gameId,
+      serverId: serverId,
+      white: server.white,
+      black: server.black,
+      moves: [],
+      status: 'active',
+      turn: 'white',
+      startTime: new Date(),
+      timeControl: server.timeControl,
+      clocks: {
+        white: timeControlMs,
+        black: timeControlMs
+      },
+      increment: incrementMs,
+      lastMoveTime: new Date()
+    };
+
+    server.gameId = gameId;
+    server.status = 'in-game';
+
+    // Join both players to game room
+    const whiteSocket = io.sockets.sockets.get(server.white.id);
+    const blackSocket = io.sockets.sockets.get(server.black.id);
+
+    if (whiteSocket) whiteSocket.join(gameId);
+    if (blackSocket) blackSocket.join(gameId);
+
+    // Notify both players
+    io.to(gameId).emit('gameStarted', {
+      gameId,
+      serverId,
+      white: server.white,
+      black: server.black,
+      turn: 'white',
+      timeControl: server.timeControl,
+      clocks: games[gameId].clocks
+    });
+
+    // Broadcast updated server status
+    io.emit('serverLobbies', serverLobbies);
+
+    console.log(`Game started in server ${serverId} with time control: ${server.timeControl.name} - ${server.white.name} vs ${server.black.name}`);
+  });
+
   // Player makes a move
   socket.on('makeMove', ({ gameId, move }) => {
     const game = games[gameId];
@@ -218,6 +336,39 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // Calculate time used if game has time control
+    if (game.clocks && game.lastMoveTime) {
+      const currentTime = new Date();
+      const timeUsed = currentTime - game.lastMoveTime;
+
+      // Subtract time used from current player's clock
+      game.clocks[playerColor] -= timeUsed;
+
+      // Add increment for the move just made
+      if (game.increment && game.moves.length > 0) { // No increment for first move
+        game.clocks[playerColor] += game.increment;
+      }
+
+      // Check for time forfeit
+      if (game.clocks[playerColor] <= 0) {
+        game.status = 'finished';
+        game.winner = playerColor === 'white' ? 'black' : 'white';
+        game.endTime = new Date();
+        game.endReason = 'time';
+
+        // Notify both players
+        io.to(gameId).emit('gameEnded', {
+          gameId: game.id,
+          winner: game.winner,
+          reason: 'time',
+          message: `${playerColor === 'white' ? game.white.name : game.black.name} ran out of time. ${game.winner === 'white' ? game.white.name : game.black.name} wins!`
+        });
+        return;
+      }
+
+      game.lastMoveTime = currentTime;
+    }
+
     // Add move to game history
     game.moves.push({
       ...move,
@@ -232,7 +383,8 @@ io.on('connection', (socket) => {
       gameId,
       move,
       turn: game.turn,
-      by: playerColor
+      by: playerColor,
+      clocks: game.clocks || null
     });
   });
 
@@ -426,23 +578,17 @@ io.on('connection', (socket) => {
   });
 });
 
-// Configure ports
-const WEB_PORT = process.env.WEB_PORT || 3000;
-const GAME_PORT = process.env.GAME_PORT || 3002;
+// Configure ports - Use Render's PORT environment variable
+const WEB_PORT = process.env.PORT || 3000;
+const GAME_PORT = process.env.GAME_PORT || (process.env.PORT || 3002);
 
-// Start the servers
-webServer.listen(WEB_PORT, () => {
-  console.log(`Web server running on http://localhost:${WEB_PORT}`);
-});
-
-gameServer.listen(GAME_PORT, () => {
-  console.log(`Game WebSocket server running on ws://localhost:${GAME_PORT}`);
+// Start single server (Render only allows one port)
+server.listen(WEB_PORT, () => {
+  console.log(`Server running on port ${WEB_PORT}`);
 });
 
 // Log server info
 console.log('------------------------------------');
-console.log('All servers started successfully:');
-console.log('- Web Server: http://localhost:3000');
-console.log('- Game WebSocket Server: ws://localhost:3002');
-console.log('Open your browser to: http://localhost:3000');
+console.log('Server started successfully');
+console.log(`Running on port: ${WEB_PORT}`);
 console.log('------------------------------------');
