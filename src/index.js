@@ -236,42 +236,178 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Handle player leaving to lobby during game
+  socket.on('leaveToLobby', () => {
+    if (!socket.playerName) {
+      return;
+    }
+
+    console.log(`Player ${socket.playerName} is leaving to lobby`);
+
+    // Check if player is in an active game
+    Object.values(serverLobbies).forEach(server => {
+      if (server.status === 'in-game' && server.gameId) {
+        const game = games[server.gameId];
+
+        if (game && game.status === 'active') {
+          const isWhitePlayer = server.white && server.white.id === socket.id;
+          const isBlackPlayer = server.black && server.black.id === socket.id;
+
+          if (isWhitePlayer || isBlackPlayer) {
+            const leavingColor = isWhitePlayer ? 'white' : 'black';
+            const winningColor = isWhitePlayer ? 'black' : 'white';
+            const opponent = isWhitePlayer ? server.black : server.white;
+
+            // End the game - opponent wins by resignation
+            game.status = 'finished';
+            game.winner = winningColor;
+            game.endTime = new Date();
+            game.endReason = 'resignation';
+
+            console.log(`Game ${game.id}: ${leavingColor} resigned, ${winningColor} wins`);
+
+            // Notify the opponent they won
+            if (opponent) {
+              const opponentSocket = io.sockets.sockets.get(opponent.id);
+              if (opponentSocket) {
+                opponentSocket.emit('gameEnded', {
+                  gameId: game.id,
+                  winner: winningColor,
+                  reason: 'resignation',
+                  message: `${socket.playerName} has resigned. You win!`
+                });
+              }
+            }
+
+            // Reset server status
+            server.status = 'available';
+            server.white = null;
+            server.black = null;
+            server.gameId = null;
+            server.players = [];
+
+            // Broadcast updated server status
+            io.emit('serverLobbies', serverLobbies);
+          }
+        }
+      }
+    });
+  });
+
+  // Handle player leaving a lobby (before game starts)
+  socket.on('leaveLobby', () => {
+    if (!socket.playerName) {
+      return;
+    }
+
+    console.log(`Player ${socket.playerName} is leaving lobby`);
+
+    // Remove player from any servers they're currently in
+    Object.values(serverLobbies).forEach(server => {
+      // Remove from white slot
+      if (server.white && server.white.id === socket.id) {
+        console.log(`Removing ${socket.playerName} from white slot in server ${server.id}`);
+        server.white = null;
+
+        // Update server status
+        if (!server.black && server.status !== 'in-game') {
+          server.status = 'available';
+        } else if (server.black && server.status !== 'in-game') {
+          server.status = 'waiting';
+        }
+      }
+
+      // Remove from black slot
+      if (server.black && server.black.id === socket.id) {
+        console.log(`Removing ${socket.playerName} from black slot in server ${server.id}`);
+        server.black = null;
+
+        // Update server status
+        if (!server.white && server.status !== 'in-game') {
+          server.status = 'available';
+        } else if (server.white && server.status !== 'in-game') {
+          server.status = 'waiting';
+        }
+      }
+
+      // Remove from players list
+      const initialPlayerCount = server.players.length;
+      server.players = server.players.filter(p => p.id !== socket.id);
+
+      if (server.players.length !== initialPlayerCount) {
+        console.log(`Removed ${socket.playerName} from players list in server ${server.id}`);
+      }
+    });
+
+    // Clear the player's current server
+    socket.currentServer = null;
+
+    // Broadcast updated server status to all players
+    io.emit('serverLobbies', serverLobbies);
+  });
+
   // Handle disconnections
   socket.on('disconnect', () => {
     console.log('Game server: User disconnected:', socket.id);
 
-    // Remove player from all servers
+    // Remove player from all servers and handle game resignation
     Object.values(serverLobbies).forEach(server => {
       if (server.white && server.white.id === socket.id) {
-        server.white = null;
-        if (server.status === 'in-game') {
-          // Notify other player of disconnection
-          if (server.black) {
-            const blackSocket = io.sockets.sockets.get(server.black.id);
-            if (blackSocket) {
-              blackSocket.emit('playerDisconnected', {
-                message: `${socket.playerName} has disconnected`
-              });
+        // If player was in an active game, end it
+        if (server.status === 'in-game' && server.gameId) {
+          const game = games[server.gameId];
+          if (game && game.status === 'active') {
+            game.status = 'finished';
+            game.winner = 'black';
+            game.endTime = new Date();
+            game.endReason = 'disconnection';
+
+            // Notify black player they won
+            if (server.black) {
+              const blackSocket = io.sockets.sockets.get(server.black.id);
+              if (blackSocket) {
+                blackSocket.emit('gameEnded', {
+                  gameId: game.id,
+                  winner: 'black',
+                  reason: 'disconnection',
+                  message: `${socket.playerName} has disconnected. You win!`
+                });
+              }
             }
           }
         }
+
+        server.white = null;
         if (!server.black) server.status = 'available';
         else if (server.status !== 'in-game') server.status = 'waiting';
       }
 
       if (server.black && server.black.id === socket.id) {
-        server.black = null;
-        if (server.status === 'in-game') {
-          // Notify other player of disconnection
-          if (server.white) {
-            const whiteSocket = io.sockets.sockets.get(server.white.id);
-            if (whiteSocket) {
-              whiteSocket.emit('playerDisconnected', {
-                message: `${socket.playerName} has disconnected`
-              });
+        // If player was in an active game, end it
+        if (server.status === 'in-game' && server.gameId) {
+          const game = games[server.gameId];
+          if (game && game.status === 'active') {
+            game.status = 'finished';
+            game.winner = 'white';
+            game.endTime = new Date();
+            game.endReason = 'disconnection';
+
+            // Notify white player they won
+            if (server.white) {
+              const whiteSocket = io.sockets.sockets.get(server.white.id);
+              if (whiteSocket) {
+                whiteSocket.emit('gameEnded', {
+                  gameId: game.id,
+                  winner: 'white',
+                  reason: 'disconnection',
+                  message: `${socket.playerName} has disconnected. You win!`
+                });
+              }
             }
           }
         }
+
+        server.black = null;
         if (!server.white) server.status = 'available';
         else if (server.status !== 'in-game') server.status = 'waiting';
       }

@@ -132,6 +132,21 @@
             checkGameEnd();
         });
 
+        socket.on('gameEnded', (data) => {
+            // Handle game ending due to resignation or disconnection
+            gameState.status = 'finished';
+            gameState.winner = data.winner;
+
+            alert(data.message);
+
+            // Reset chess board to starting position
+            chess.reset();
+            updateBoard();
+
+            // Return to server lobby
+            showScreen(serverLobbyScreen);
+        });
+
         socket.on('playerDisconnected', (data) => {
             alert(data.message);
             showScreen(serverLobbyScreen);
@@ -270,11 +285,17 @@
             }
         });
 
-        // Show/hide start button
+        // Show/hide start button - only show for white player when both colors are selected
         if (server.white && server.white.id === playerInfo.id && server.black) {
             startGameBtn.classList.remove('hidden');
+            console.log('Showing start button for white player');
         } else {
             startGameBtn.classList.add('hidden');
+            if (server.white && server.black) {
+                console.log('Both players connected, but current player is not white');
+            } else {
+                console.log('Waiting for both players to select colors');
+            }
         }
     }
 
@@ -308,11 +329,25 @@
 
         // Back to lobby button
         backToLobbyBtn.addEventListener('click', () => {
+            // If player is in an active game, emit leave to lobby event (which will resign them)
+            if (gameState.status === 'active') {
+                socket.emit('leaveToLobby');
+            } else if (playerInfo.currentServer) {
+                // If player is in a lobby but not in an active game, emit leave lobby event
+                socket.emit('leaveLobby');
+            }
             showScreen(serverLobbyScreen);
         });
 
         // Back to server button (from game)
         backToServerBtn.addEventListener('click', () => {
+            // If player is in an active game, emit leave to lobby event (which will resign them)
+            if (gameState.status === 'active') {
+                socket.emit('leaveToLobby');
+            } else if (playerInfo.currentServer) {
+                // If player is in a lobby but not in an active game, emit leave lobby event
+                socket.emit('leaveLobby');
+            }
             showScreen(serverLobbyScreen);
         });
 
