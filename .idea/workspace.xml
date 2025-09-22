@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="f77277ae-7145-4a46-8ada-ecec86b96798" name="Changes" comment="remove start button when already started">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
-    </list>
+    <list default="true" id="f77277ae-7145-4a46-8ada-ecec86b96798" name="Changes" comment="update to end position once both players have left the position" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -109,7 +106,7 @@
       <workItem from="1751732512202" duration="4000" />
       <workItem from="1758482000182" duration="5000" />
       <workItem from="1758482013337" duration="3313000" />
-      <workItem from="1758562837597" duration="297000" />
+      <workItem from="1758562837597" duration="626000" />
     </task>
     <task id="LOCAL-00001" summary="fix for vercel">
       <option name="closed" value="true" />
@@ -191,7 +188,23 @@
       <option name="project" value="LOCAL" />
       <updated>1758485366012</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="fix the start button">
+      <option name="closed" value="true" />
+      <created>1758563282202</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1758563282202</updated>
+    </task>
+    <task id="LOCAL-00012" summary="update to end position once both players have left the position">
+      <option name="closed" value="true" />
+      <created>1758563430399</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1758563430399</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -219,6 +232,8 @@
     <MESSAGE value="update with servers" />
     <MESSAGE value="update for render" />
     <MESSAGE value="remove start button when already started" />
-    <option name="LAST_COMMIT_MESSAGE" value="remove start button when already started" />
+    <MESSAGE value="fix the start button" />
+    <MESSAGE value="update to end position once both players have left the position" />
+    <option name="LAST_COMMIT_MESSAGE" value="update to end position once both players have left the position" />
   </component>
 </project>
