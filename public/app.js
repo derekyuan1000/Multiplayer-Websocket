@@ -385,39 +385,41 @@
 
     // Update UI based on color selections in current server
     function updateColorSelections(server) {
-        colorOptions.forEach(option => {
-            const color = option.dataset.color;
-            const nameSpan = option.querySelector('.player-name');
+        if (colorOptions) {
+            colorOptions.forEach(option => {
+                const color = option.dataset.color;
+                const nameSpan = option.querySelector('.player-name');
 
-            // Reset classes
-            option.classList.remove('selected', 'taken');
-            option.removeAttribute('disabled');
+                // Reset classes
+                option.classList.remove('selected', 'taken');
+                option.removeAttribute('disabled');
 
-            // Check if this color is selected by the current player
-            if (server[color] && server[color].id === playerInfo.id) {
-                option.classList.add('selected');
-                nameSpan.textContent = `(${playerInfo.name})`;
-            }
-            // Check if this color is selected by another player
-            else if (server[color]) {
-                option.classList.add('taken');
-                option.setAttribute('disabled', 'disabled');
-                nameSpan.textContent = `(${server[color].name})`;
-            } else {
-                // Color is available
-                nameSpan.textContent = '';
-            }
-        });
+                // Check if this color is selected by the current player
+                if (server[color] && server[color].id === playerInfo.id) {
+                    option.classList.add('selected');
+                    if (nameSpan) nameSpan.textContent = `(${playerInfo.name})`;
+                }
+                // Check if this color is selected by another player
+                else if (server[color]) {
+                    option.classList.add('taken');
+                    option.setAttribute('disabled', 'disabled');
+                    if (nameSpan) nameSpan.textContent = `(${server[color].name})`;
+                } else {
+                    // Color is available
+                    if (nameSpan) nameSpan.textContent = '';
+                }
+            });
+        }
 
         // Show/hide buttons based on player role and server state
         if (server.white && server.white.id === playerInfo.id && server.black) {
             // White player with both colors selected
-            startGameBtn.classList.remove('hidden');
-            selectTimeBtn.classList.remove('hidden');
+            if (startGameBtn) startGameBtn.classList.remove('hidden');
+            if (selectTimeBtn) selectTimeBtn.classList.remove('hidden');
             console.log('Showing start and time control buttons for white player');
         } else {
-            startGameBtn.classList.add('hidden');
-            selectTimeBtn.classList.add('hidden');
+            if (startGameBtn) startGameBtn.classList.add('hidden');
+            if (selectTimeBtn) selectTimeBtn.classList.add('hidden');
             if (server.white && server.black) {
                 console.log('Both players connected, but current player is not white');
             } else {
@@ -429,128 +431,148 @@
     // Setup event listeners
     function setupEventListeners() {
         // Register player name
-        registerBtn.addEventListener('click', () => {
-            const name = playerNameInput.value.trim();
-            if (name) {
-                socket.emit('registerPlayer', name);
-            } else {
-                alert('Please enter your name.');
-            }
-        });
+        if (registerBtn) {
+            registerBtn.addEventListener('click', () => {
+                const name = playerNameInput.value.trim();
+                if (name) {
+                    socket.emit('registerPlayer', name);
+                } else {
+                    alert('Please enter your name.');
+                }
+            });
+        }
 
         // Color selection
-        colorOptions.forEach(option => {
-            option.addEventListener('click', () => {
-                // Skip if this color is already taken by another player
-                if (option.classList.contains('taken')) {
-                    return;
-                }
+        if (colorOptions) {
+            colorOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    // Skip if this color is already taken by another player
+                    if (option.classList.contains('taken')) {
+                        return;
+                    }
 
-                const color = option.dataset.color;
-                socket.emit('selectColor', {
-                    serverId: playerInfo.currentServer,
-                    color: color
+                    const color = option.dataset.color;
+                    socket.emit('selectColor', {
+                        serverId: playerInfo.currentServer,
+                        color: color
+                    });
                 });
             });
-        });
+        }
 
         // Back to lobby button
-        backToLobbyBtn.addEventListener('click', () => {
-            // If player is in an active game, emit leave to lobby event (which will resign them)
-            if (gameState.status === 'active') {
-                socket.emit('leaveToLobby');
-            } else if (playerInfo.currentServer) {
-                // If player is in a lobby but not in an active game, emit leave lobby event
-                socket.emit('leaveLobby');
-            }
-            showScreen(serverLobbyScreen);
-        });
+        if (backToLobbyBtn) {
+            backToLobbyBtn.addEventListener('click', () => {
+                // If player is in an active game, emit leave to lobby event (which will resign them)
+                if (gameState.status === 'active') {
+                    socket.emit('leaveToLobby');
+                } else if (playerInfo.currentServer) {
+                    // If player is in a lobby but not in an active game, emit leave lobby event
+                    socket.emit('leaveLobby');
+                }
+                showScreen(serverLobbyScreen);
+            });
+        }
 
         // Back to colors button (from time control)
-        backToColorsBtn.addEventListener('click', () => {
-            showScreen(colorSelectionScreen);
-        });
+        if (backToColorsBtn) {
+            backToColorsBtn.addEventListener('click', () => {
+                showScreen(colorSelectionScreen);
+            });
+        }
 
         // Back to server button (from game)
-        backToServerBtn.addEventListener('click', () => {
-            // If player is in an active game, emit leave to lobby event (which will resign them)
-            if (gameState.status === 'active') {
-                socket.emit('leaveToLobby');
-            } else if (playerInfo.currentServer) {
-                // If player is in a lobby but not in an active game, emit leave lobby event
-                socket.emit('leaveLobby');
-            }
-            showScreen(serverLobbyScreen);
-        });
+        if (backToServerBtn) {
+            backToServerBtn.addEventListener('click', () => {
+                // If player is in an active game, emit leave to lobby event (which will resign them)
+                if (gameState.status === 'active') {
+                    socket.emit('leaveToLobby');
+                } else if (playerInfo.currentServer) {
+                    // If player is in a lobby but not in an active game, emit leave lobby event
+                    socket.emit('leaveLobby');
+                }
+                showScreen(serverLobbyScreen);
+            });
+        }
 
         // Select time control preset
-        timeControlPresets.forEach(preset => {
-            preset.addEventListener('click', () => {
-                // Remove selected class from all presets
-                timeControlPresets.forEach(p => p.classList.remove('selected'));
+        if (timeControlPresets) {
+            timeControlPresets.forEach(preset => {
+                preset.addEventListener('click', () => {
+                    // Remove selected class from all presets
+                    timeControlPresets.forEach(p => p.classList.remove('selected'));
 
-                // Add selected class to clicked preset
-                preset.classList.add('selected');
+                    // Add selected class to clicked preset
+                    preset.classList.add('selected');
 
-                // Get preset values
-                const minutes = parseInt(preset.dataset.minutes);
-                const increment = parseInt(preset.dataset.increment);
+                    // Get preset values
+                    const minutes = parseInt(preset.dataset.minutes);
+                    const increment = parseInt(preset.dataset.increment);
 
-                // Create time control object
-                const timeControl = {
-                    name: preset.querySelector('h3').textContent,
-                    minutes: minutes,
-                    increment: increment
-                };
+                    // Create time control object
+                    const timeControl = {
+                        name: preset.querySelector('h3').textContent,
+                        minutes: minutes,
+                        increment: increment
+                    };
 
-                // Emit time control selection to server
-                socket.emit('selectTimeControl', {
-                    serverId: playerInfo.currentServer,
-                    timeControl: timeControl
+                    // Emit time control selection to server
+                    socket.emit('selectTimeControl', {
+                        serverId: playerInfo.currentServer,
+                        timeControl: timeControl
+                    });
                 });
             });
-        });
+        }
 
         // Select custom time control
-        selectCustomBtn.addEventListener('click', () => {
-            const minutes = parseInt(customMinutes.value);
-            const increment = parseInt(customIncrement.value);
+        if (selectCustomBtn) {
+            selectCustomBtn.addEventListener('click', () => {
+                const minutes = parseInt(customMinutes.value);
+                const increment = parseInt(customIncrement.value);
 
-            if (minutes > 0 && increment >= 0) {
-                const timeControl = {
-                    name: 'Custom',
-                    minutes: minutes,
-                    increment: increment
-                };
+                if (minutes > 0 && increment >= 0) {
+                    const timeControl = {
+                        name: 'Custom',
+                        minutes: minutes,
+                        increment: increment
+                    };
 
-                // Emit custom time control selection
-                socket.emit('selectTimeControl', {
-                    serverId: playerInfo.currentServer,
-                    timeControl: timeControl
-                });
-            } else {
-                alert('Please enter valid time controls (minutes > 0, increment >= 0).');
-            }
-        });
+                    // Emit custom time control selection
+                    socket.emit('selectTimeControl', {
+                        serverId: playerInfo.currentServer,
+                        timeControl: timeControl
+                    });
+                } else {
+                    alert('Please enter valid time controls (minutes > 0, increment >= 0).');
+                }
+            });
+        }
 
         // Select time control button
-        selectTimeBtn.addEventListener('click', () => {
-            showScreen(timeControlScreen);
-        });
+        if (selectTimeBtn) {
+            selectTimeBtn.addEventListener('click', () => {
+                showScreen(timeControlScreen);
+            });
+        }
 
         // Start timed game button
-        startTimedGameBtn.addEventListener('click', () => {
-            if (playerInfo.currentServer && selectedTimeControl) {
-                socket.emit('startGameWithTime', playerInfo.currentServer);
-            }
-        });
+        if (startTimedGameBtn) {
+            startTimedGameBtn.addEventListener('click', () => {
+                if (playerInfo.currentServer && selectedTimeControl) {
+                    socket.emit('startGameWithTime', playerInfo.currentServer);
+                }
+            });
+        }
 
         // Start game button (regular game without time control)
-        startGameBtn.addEventListener('click', () => {
-            if (playerInfo.currentServer) {
-                socket.emit('startGame', playerInfo.currentServer);
-            }
-        });
+        if (startGameBtn) {
+            startGameBtn.addEventListener('click', () => {
+                if (playerInfo.currentServer) {
+                    socket.emit('startGame', playerInfo.currentServer);
+                }
+            });
+        }
     }
 
     // Create the chessboard UI
