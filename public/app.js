@@ -814,6 +814,19 @@
             }
 
             updateGameStatus();
+
+            // Reset the chess position and board after a short delay to allow players to see the final position
+            setTimeout(() => {
+                chess.reset();
+                updateBoard();
+                // Clear any selected pieces and highlights
+                gameState.selectedPiece = null;
+                gameState.validMoves = [];
+                // Stop clocks if running
+                stopChessClocks();
+                // Return to server lobby
+                showScreen(serverLobbyScreen);
+            }, 3000); // 3 second delay to show the final position
         }
     }
 
